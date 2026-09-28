@@ -46,6 +46,11 @@ export function AuthProvider({ children }) {
 
   // On mount: validate existing token and load user info
   useEffect(() => {
+    const handleForceLogout = () => {
+      logout();
+    };
+    window.addEventListener('auth:logout', handleForceLogout);
+
     const init = async () => {
       const token = localStorage.getItem('accessToken');
       if (!token) {
@@ -62,6 +67,9 @@ export function AuthProvider({ children }) {
           if (!refreshToken) throw new Error('No refresh token');
           const data = await authApi.refresh(refreshToken);
           localStorage.setItem('accessToken', data.accessToken);
+          if (data.refreshToken) {
+            localStorage.setItem('refreshToken', data.refreshToken);
+          }
           dispatch({ type: 'UPDATE_TOKEN', payload: data.accessToken });
           const user = await authApi.getMe();
           dispatch({ type: 'SET_USER', payload: user });
@@ -71,6 +79,10 @@ export function AuthProvider({ children }) {
       }
     };
     init();
+
+    return () => {
+      window.removeEventListener('auth:logout', handleForceLogout);
+    };
   }, []);
 
   const login = async (email, password) => {

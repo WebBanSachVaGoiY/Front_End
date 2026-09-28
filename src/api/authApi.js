@@ -23,22 +23,39 @@ const saveUsers = (users) => {
 
 export const authApi = {
   login: async (credentials) => {
+    const usernameOrEmail = (credentials.usernameOrEmail || credentials.email || credentials.username || '').trim();
     const payload = {
-      username: credentials.username || credentials.email,
-      email: credentials.email || credentials.username,
+      usernameOrEmail,
       password: credentials.password,
     };
 
     try {
-      const { data } = await api.post('/auth/login', payload);
-      return data;
+      const response = await api.post('/v1/auth/login', payload);
+      const resData = response.data?.data || response.data;
+      const userObj = {
+        id: resData.userId || resData.id,
+        username: resData.username,
+        email: resData.email,
+        fullName: resData.fullName,
+        role: resData.role,
+      };
+      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userObj));
+      return {
+        accessToken: resData.accessToken,
+        refreshToken: resData.refreshToken,
+        user: userObj,
+      };
     } catch (apiError) {
-      // If backend not available or returned 404/500/network error, fallback to mock
+      if (apiError.response && (apiError.response.status === 400 || apiError.response.status === 401 || apiError.response.status === 403)) {
+        throw new Error(apiError.response.data?.message || 'Tài khoản hoặc mật khẩu không chính xác');
+      }
+
+      // If backend not available (502 / Network error), fallback to mock
       const users = getStoredUsers();
       const matched = users.find(
         (u) =>
-          (u.email?.toLowerCase() === payload.email?.toLowerCase() ||
-           u.username?.toLowerCase() === payload.username?.toLowerCase()) &&
+          (u.email?.toLowerCase() === usernameOrEmail.toLowerCase() ||
+           u.username?.toLowerCase() === usernameOrEmail.toLowerCase()) &&
           u.password === payload.password
       );
 
@@ -70,14 +87,18 @@ export const authApi = {
 
   register: async (userData) => {
     const payload = {
-      username: userData.username || userData.email,
+      username: (userData.username || userData.email?.split('@')[0] || userData.email || '').trim().toLowerCase(),
       ...userData,
     };
 
     try {
-      const { data } = await api.post('/auth/register', payload);
-      return data;
+      const response = await api.post('/v1/auth/register', payload);
+      const resData = response.data?.data || response.data;
+      return resData;
     } catch (apiError) {
+      if (apiError.response?.data?.message) {
+        throw new Error(apiError.response.data.message);
+      }
       const users = getStoredUsers();
       const existing = users.find(
         (u) =>
@@ -117,7 +138,7 @@ export const authApi = {
 
   logout: async () => {
     try {
-      await api.post('/auth/logout');
+      await api.post('/v1/auth/logout');
     } catch {
       // ignore
     }
@@ -126,19 +147,29 @@ export const authApi = {
 
   refresh: async (refreshToken) => {
     try {
-      const { data } = await api.post('/auth/refresh', { refreshToken });
-      return data;
+      const response = await api.post('/v1/auth/refresh', { refreshToken });
+      const resData = response.data?.data || response.data;
+      return {
+        accessToken: resData.accessToken,
+        refreshToken: resData.refreshToken,
+      };
     } catch {
       return {
         accessToken: `mock-refreshed-token-${Date.now()}`,
+        refreshToken,
       };
     }
   },
 
   getMe: async () => {
     try {
-      const { data } = await api.get('/auth/me');
-      return data;
+      const response = await api.get('/v1/auth/me');
+      const resData = response.data?.data || response.data;
+      if (resData) {
+        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(resData));
+        return resData;
+      }
+      return resData;
     } catch {
       const stored = localStorage.getItem(CURRENT_USER_KEY);
       if (stored) {
@@ -150,7 +181,7 @@ export const authApi = {
 
   updateProfile: async (profileData) => {
     try {
-      const { data } = await api.put('/auth/me', profileData);
+      const { data } = await api.put('/v1/auth/me', profileData);
       return data;
     } catch {
       const stored = localStorage.getItem(CURRENT_USER_KEY);
@@ -170,7 +201,7 @@ export const authApi = {
 
   changePassword: async (passwordData) => {
     try {
-      const { data } = await api.put('/auth/me/password', passwordData);
+      const { data } = await api.put('/v1/auth/me/password', passwordData);
       return data;
     } catch {
       const stored = localStorage.getItem(CURRENT_USER_KEY);

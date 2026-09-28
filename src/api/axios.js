@@ -67,13 +67,25 @@ api.interceptors.response.use(
       }
 
       try {
-        const { data } = await axios.post(`${BASE_URL}/auth/refresh`, {
+        const response = await axios.post(`${BASE_URL}/v1/auth/refresh`, {
           refreshToken,
         });
-        localStorage.setItem('accessToken', data.accessToken);
-        api.defaults.headers.common.Authorization = `Bearer ${data.accessToken}`;
-        processQueue(null, data.accessToken);
-        originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
+        const resData = response.data?.data || response.data;
+        const newAccessToken = resData.accessToken;
+        const newRefreshToken = resData.refreshToken;
+
+        if (!newAccessToken) {
+          throw new Error('Không nhận được accessToken mới từ máy chủ');
+        }
+
+        localStorage.setItem('accessToken', newAccessToken);
+        if (newRefreshToken) {
+          localStorage.setItem('refreshToken', newRefreshToken);
+        }
+
+        api.defaults.headers.common.Authorization = `Bearer ${newAccessToken}`;
+        processQueue(null, newAccessToken);
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
