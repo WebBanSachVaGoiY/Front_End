@@ -100,10 +100,16 @@ export function AuthProvider({ children }) {
     return data;
   };
 
-  const logout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    dispatch({ type: 'LOGOUT' });
+  const logout = async () => {
+    try {
+      await authApi.logout();
+    } catch {
+      // Bỏ qua lỗi API (ví dụ token đã chết 401 hoặc rớt mạng)
+    } finally {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      dispatch({ type: 'LOGOUT' });
+    }
   };
 
   const updateUser = (userData) => {

@@ -17,8 +17,11 @@ const getStoredUsers = () => {
   }
 };
 
-const saveUsers = (users) => {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+const isOfflineOrUnimplemented = (err) => {
+  if (!err?.response) return true; // Mất mạng / Backend chưa bật
+  if (err.response.status === 502) return true; // Vite proxy Bad Gateway
+  if (err.response.status === 404) return true; // Endpoint Backend chưa viết
+  return false;
 };
 
 export const authApi = {
@@ -30,7 +33,7 @@ export const authApi = {
     };
 
     try {
-      const response = await api.post('/v1/auth/login', payload);
+      const response = await api.post('/auth/login', payload);
       const resData = response.data?.data || response.data;
       const userObj = {
         id: resData.userId || resData.id,
@@ -86,13 +89,20 @@ export const authApi = {
   },
 
   register: async (userData) => {
+    let generatedUsername = (userData.username || userData.email?.split('@')[0] || userData.email || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, '');
+    if (generatedUsername.length < 3) {
+      generatedUsername = `${generatedUsername}user`.slice(0, 50);
+    }
     const payload = {
-      username: (userData.username || userData.email?.split('@')[0] || userData.email || '').trim().toLowerCase(),
+      username: generatedUsername,
       ...userData,
     };
 
     try {
-      const response = await api.post('/v1/auth/register', payload);
+      const response = await api.post('/auth/register', payload);
       const resData = response.data?.data || response.data;
       return resData;
     } catch (apiError) {
@@ -138,7 +148,7 @@ export const authApi = {
 
   logout: async () => {
     try {
-      await api.post('/v1/auth/logout');
+      await api.post('/auth/logout');
     } catch {
       // ignore
     }
@@ -147,7 +157,7 @@ export const authApi = {
 
   refresh: async (refreshToken) => {
     try {
-      const response = await api.post('/v1/auth/refresh', { refreshToken });
+      const response = await api.post('/auth/refresh', { refreshToken });
       const resData = response.data?.data || response.data;
       return {
         accessToken: resData.accessToken,
@@ -163,7 +173,7 @@ export const authApi = {
 
   getMe: async () => {
     try {
-      const response = await api.get('/v1/auth/me');
+      const response = await api.get('/auth/me');
       const resData = response.data?.data || response.data;
       if (resData) {
         localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(resData));
@@ -179,11 +189,13 @@ export const authApi = {
     }
   },
 
+  // [USER-MODULE-BE] Đã tích hợp Backend UserController (/users/profile). Fallback chỉ kích hoạt khi server offline.
   updateProfile: async (profileData) => {
     try {
-      const { data } = await api.put('/v1/auth/me', profileData);
-      return data;
-    } catch {
+      const response = await api.put('/users/profile', profileData);
+      return response.data?.data || response.data;
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
       const stored = localStorage.getItem(CURRENT_USER_KEY);
       const currentUser = stored ? JSON.parse(stored) : DEFAULT_MOCK_USERS[1];
       const updated = { ...currentUser, ...profileData };
@@ -199,11 +211,13 @@ export const authApi = {
     }
   },
 
+  // [USER-MODULE-BE] Đã tích hợp Backend UserController (/users/change-password). Fallback chỉ kích hoạt khi server offline.
   changePassword: async (passwordData) => {
     try {
-      const { data } = await api.put('/v1/auth/me/password', passwordData);
-      return data;
-    } catch {
+      const response = await api.put('/users/change-password', passwordData);
+      return response.data?.data || response.data;
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
       const stored = localStorage.getItem(CURRENT_USER_KEY);
       const currentUser = stored ? JSON.parse(stored) : null;
       if (!currentUser) throw new Error('Chưa đăng nhập');

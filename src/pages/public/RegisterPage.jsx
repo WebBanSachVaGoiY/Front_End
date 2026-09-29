@@ -25,8 +25,13 @@ export default function RegisterPage() {
     if (!form.fullName.trim()) errs.fullName = 'Vui lòng nhập họ tên';
     if (!form.email) errs.email = 'Vui lòng nhập email';
     else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = 'Email không hợp lệ';
-    if (!form.password) errs.password = 'Vui lòng nhập mật khẩu';
-    else if (form.password.length < 6) errs.password = 'Mật khẩu ít nhất 6 ký tự';
+    if (!form.password) {
+      errs.password = 'Vui lòng nhập mật khẩu';
+    } else if (form.password.length < 8) {
+      errs.password = 'Mật khẩu phải có ít nhất 8 ký tự';
+    } else if (!/^(?=.*[A-Za-z])(?=.*\d)/.test(form.password)) {
+      errs.password = 'Mật khẩu phải chứa ít nhất một chữ cái và một chữ số';
+    }
     if (!form.confirmPassword) errs.confirmPassword = 'Vui lòng xác nhận mật khẩu';
     else if (form.password !== form.confirmPassword)
       errs.confirmPassword = 'Mật khẩu không khớp';
@@ -118,7 +123,7 @@ export default function RegisterPage() {
             id="reg-password"
             type={showPass ? 'text' : 'password'}
             label="Mật khẩu"
-            placeholder="Ít nhất 6 ký tự"
+            placeholder="Ít nhất 8 ký tự, gồm chữ và số"
             value={form.password}
             onChange={set('password')}
             icon={<Lock size={16} />}

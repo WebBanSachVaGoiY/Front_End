@@ -16,12 +16,21 @@ const saveCartItems = (items) => {
   localStorage.setItem(CART_KEY, JSON.stringify(items));
 };
 
+const isOfflineOrUnimplemented = (err) => {
+  if (!err?.response) return true; // Mất mạng / Backend chưa bật
+  if (err.response.status === 502) return true; // Vite proxy Bad Gateway
+  if (err.response.status === 404) return true; // Endpoint Backend chưa viết
+  return false;
+};
+
 export const cartApi = {
   getCart: async () => {
     try {
-      const { data } = await api.get('/cart');
-      return data;
-    } catch {
+      const response = await api.get('/cart');
+      // TODO: [DTO-UNWRAP] Gỡ unwrap sau khi Backend chuẩn hóa ApiResponse<T>
+      return response.data?.data || response.data;
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
       const items = getStoredCartItems();
       return { items };
     }
@@ -29,9 +38,11 @@ export const cartApi = {
 
   addItem: async ({ bookId, quantity = 1 }) => {
     try {
-      const { data } = await api.post('/cart/items', { bookId, quantity });
-      return data;
-    } catch {
+      const response = await api.post('/cart/items', { bookId, quantity });
+      // TODO: [DTO-UNWRAP] Gỡ unwrap sau khi Backend chuẩn hóa ApiResponse<T>
+      return response.data?.data || response.data;
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
       const items = getStoredCartItems();
       const existingIdx = items.findIndex((it) => String(it.book?.id) === String(bookId));
       if (existingIdx !== -1) {
@@ -51,9 +62,11 @@ export const cartApi = {
 
   updateItem: async (itemId, { quantity }) => {
     try {
-      const { data } = await api.put(`/cart/items/${itemId}`, { quantity });
-      return data;
-    } catch {
+      const response = await api.put(`/cart/items/${itemId}`, { quantity });
+      // TODO: [DTO-UNWRAP] Gỡ unwrap sau khi Backend chuẩn hóa ApiResponse<T>
+      return response.data?.data || response.data;
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
       let items = getStoredCartItems();
       if (quantity <= 0) {
         items = items.filter((it) => String(it.id) !== String(itemId));
@@ -69,7 +82,8 @@ export const cartApi = {
   removeItem: async (itemId) => {
     try {
       await api.delete(`/cart/items/${itemId}`);
-    } catch {
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
       const items = getStoredCartItems().filter((it) => String(it.id) !== String(itemId));
       saveCartItems(items);
     }
@@ -78,7 +92,11 @@ export const cartApi = {
   clearCart: async () => {
     try {
       await api.delete('/cart');
-    } catch {
+    } catch (err) {
+      // Backend chưa có Cart API (Plan 2 sẽ thêm), bỏ qua lỗi 404/502
+      if (!isOfflineOrUnimplemented(err)) throw err;
+    } finally {
+      // Đảm bảo localStorage luôn được dọn dẹp sạch sau khi thanh toán thành công
       localStorage.removeItem(CART_KEY);
     }
   },

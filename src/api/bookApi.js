@@ -20,13 +20,46 @@ const saveBooks = (books) => {
   localStorage.setItem(BOOKS_KEY, JSON.stringify(books));
 };
 
+const isOfflineOrUnimplemented = (err) => {
+  if (!err?.response) return true; // Mất mạng / Backend chưa bật
+  if (err.response.status === 502) return true; // Vite proxy Bad Gateway
+  if (err.response.status === 404) return true; // Endpoint Backend chưa viết
+  return false;
+};
+
 export const bookApi = {
   // Public endpoints
   getBooks: async (params = {}) => {
+    const queryParams = { ...params };
+    if (params.sort) {
+      if (params.sort === 'price_asc') {
+        queryParams.sortBy = 'price';
+        queryParams.sortDir = 'asc';
+      } else if (params.sort === 'price_desc') {
+        queryParams.sortBy = 'price';
+        queryParams.sortDir = 'desc';
+      } else if (params.sort === 'rating') {
+        queryParams.sortBy = 'averageRating';
+        queryParams.sortDir = 'desc';
+      } else if (params.sort === 'best_seller') {
+        queryParams.sortBy = 'soldCount';
+        queryParams.sortDir = 'desc';
+      } else if (params.sort === 'oldest') {
+        queryParams.sortBy = 'createdAt';
+        queryParams.sortDir = 'asc';
+      } else {
+        queryParams.sortBy = 'createdAt';
+        queryParams.sortDir = 'desc';
+      }
+      delete queryParams.sort;
+    }
+
     try {
-      const { data } = await api.get('/books', { params });
-      return data;
-    } catch {
+      const { data } = await api.get('/books', { params: queryParams });
+      // TODO: [DTO-UNWRAP] Gỡ unwrap sau khi Backend chuẩn hóa ApiResponse<T>
+      return data?.data || data;
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
       let books = getStoredBooks();
 
       // Filtering
@@ -79,8 +112,10 @@ export const bookApi = {
   getBook: async (id) => {
     try {
       const { data } = await api.get(`/books/${id}`);
-      return data;
-    } catch {
+      // TODO: [DTO-UNWRAP] Gỡ unwrap sau khi Backend chuẩn hóa ApiResponse<T>
+      return data?.data || data;
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
       const books = getStoredBooks();
       const book = books.find((b) => String(b.id) === String(id));
       if (!book) throw new Error('Không tìm thấy sách');
@@ -90,9 +125,11 @@ export const bookApi = {
 
   getFeaturedBooks: async () => {
     try {
-      const { data } = await api.get('/books/featured');
-      return data;
-    } catch {
+      const res = await api.get('/books', { params: { size: 8, sortBy: 'createdAt', sortDir: 'desc' } });
+      const data = res.data?.data || res.data;
+      return data.content || data;
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
       const books = getStoredBooks();
       return books.filter((b) => b.isFeatured).slice(0, 8);
     }
@@ -100,9 +137,11 @@ export const bookApi = {
 
   getRecommendations: async () => {
     try {
-      const { data } = await api.get('/books/recommendations');
-      return data;
-    } catch {
+      const res = await api.get('/books', { params: { size: 4, sortBy: 'averageRating', sortDir: 'desc' } });
+      const data = res.data?.data || res.data;
+      return data.content || data;
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
       const books = getStoredBooks();
       return [...books].sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0)).slice(0, 4);
     }
@@ -115,8 +154,10 @@ export const bookApi = {
   getCategories: async () => {
     try {
       const { data } = await api.get('/categories');
-      return data;
-    } catch {
+      // TODO: [DTO-UNWRAP] Gỡ unwrap sau khi Backend chuẩn hóa ApiResponse<T>
+      return data?.data || data;
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
       return MOCK_CATEGORIES;
     }
   },
@@ -128,9 +169,10 @@ export const bookApi = {
   // Admin endpoints
   createBook: async (bookData) => {
     try {
-      const { data } = await api.post('/admin/books', bookData);
-      return data;
-    } catch {
+      const { data } = await api.post('/books', bookData);
+      return data?.data || data;
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
       const books = getStoredBooks();
       const cat = MOCK_CATEGORIES.find((c) => String(c.id) === String(bookData.categoryId)) || MOCK_CATEGORIES[0];
       const newBook = {
@@ -151,9 +193,10 @@ export const bookApi = {
 
   updateBook: async (id, bookData) => {
     try {
-      const { data } = await api.put(`/admin/books/${id}`, bookData);
-      return data;
-    } catch {
+      const { data } = await api.put(`/books/${id}`, bookData);
+      return data?.data || data;
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
       const books = getStoredBooks();
       const idx = books.findIndex((b) => String(b.id) === String(id));
       if (idx === -1) throw new Error('Không tìm thấy sách');
@@ -170,8 +213,9 @@ export const bookApi = {
 
   deleteBook: async (id) => {
     try {
-      await api.delete(`/admin/books/${id}`);
-    } catch {
+      await api.delete('/books', { data: [Number(id)] });
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
       const books = getStoredBooks();
       const filtered = books.filter((b) => String(b.id) !== String(id));
       saveBooks(filtered);
@@ -182,7 +226,8 @@ export const bookApi = {
     try {
       const { data } = await api.patch(`/admin/books/${id}/featured`);
       return data;
-    } catch {
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
       const books = getStoredBooks();
       const book = books.find((b) => String(b.id) === String(id));
       if (book) {

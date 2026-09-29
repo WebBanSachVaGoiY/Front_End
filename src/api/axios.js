@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = '/api';
+const BASE_URL = '/api/v1';
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -37,12 +37,27 @@ const processQueue = (error, token = null) => {
   failedQueue = [];
 };
 
+// Dedicated Axios instance for refreshing token to preserve baseURL & config without interceptor recursion
+const refreshClient = axios.create({
+  baseURL: BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: 15000,
+});
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Do not attempt token refresh for auth endpoints (logout, login, refresh itself)
+    const isAuthEndpoint =
+      originalRequest?.url?.includes('/auth/logout') ||
+      originalRequest?.url?.includes('/auth/login') ||
+      originalRequest?.url?.includes('/auth/refresh');
+
+    if (error.response?.status === 401 && !originalRequest?._retry && !isAuthEndpoint) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -67,7 +82,7 @@ api.interceptors.response.use(
       }
 
       try {
-        const response = await axios.post(`${BASE_URL}/v1/auth/refresh`, {
+        const response = await refreshClient.post('/auth/refresh', {
           refreshToken,
         });
         const resData = response.data?.data || response.data;

@@ -54,6 +54,10 @@ export default function CheckoutPage() {
         shippingAddress: form.shippingAddress,
         note: form.note,
         paymentMethod: 'COD',
+        items: items.map((it) => ({
+          bookId: it.book?.id || it.id,
+          quantity: it.quantity,
+        })),
       });
       await clearCart();
       setSuccess(order);

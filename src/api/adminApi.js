@@ -16,13 +16,22 @@ const saveUsers = (users) => {
   localStorage.setItem(USERS_KEY, JSON.stringify(users));
 };
 
+const isOfflineOrUnimplemented = (err) => {
+  if (!err?.response) return true; // Mất mạng / Backend chưa bật
+  if (err.response.status === 502) return true; // Vite proxy Bad Gateway
+  if (err.response.status === 404) return true; // Endpoint Backend chưa viết
+  return false;
+};
+
+// TODO: [ADMIN-STATS-USERS-BE] Backend chưa có Controller thống kê (/admin/stats/**) và quản lý User (/admin/users/**).
 export const adminApi = {
   // Dashboard stats
   getStats: async () => {
     try {
-      const { data } = await api.get('/admin/stats');
-      return data;
-    } catch {
+      const response = await api.get('/admin/stats');
+      return response.data?.data || response.data;
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
       return {
         totalRevenue: 285000000,
         totalOrders: 1420,
@@ -34,9 +43,10 @@ export const adminApi = {
 
   getRevenueChart: async (params = {}) => {
     try {
-      const { data } = await api.get('/admin/stats/revenue', { params });
-      return data;
-    } catch {
+      const response = await api.get('/admin/stats/revenue', { params });
+      return response.data?.data || response.data;
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
       return [
         { month: 'T1', revenue: 14000000 },
         { month: 'T2', revenue: 21000000 },
@@ -53,9 +63,10 @@ export const adminApi = {
 
   getBestSellers: async (limit = 10) => {
     try {
-      const { data } = await api.get('/admin/stats/best-sellers', { params: { limit } });
-      return data;
-    } catch {
+      const response = await api.get('/admin/stats/best-sellers', { params: { limit } });
+      return response.data?.data || response.data;
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
       return [
         { title: 'Đắc Nhân Tâm', sold: 185 },
         { title: 'Nhà Giả Kim', sold: 164 },
@@ -69,9 +80,10 @@ export const adminApi = {
   // User management
   getUsers: async (params = {}) => {
     try {
-      const { data } = await api.get('/admin/users', { params });
-      return data;
-    } catch {
+      const response = await api.get('/admin/users', { params });
+      return response.data?.data || response.data;
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
       const users = getStoredUsers();
       return {
         content: users,
@@ -82,9 +94,10 @@ export const adminApi = {
 
   getUser: async (id) => {
     try {
-      const { data } = await api.get(`/admin/users/${id}`);
-      return data;
-    } catch {
+      const response = await api.get(`/admin/users/${id}`);
+      return response.data?.data || response.data;
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
       const users = getStoredUsers();
       const user = users.find((u) => String(u.id) === String(id));
       if (!user) throw new Error('Không tìm thấy người dùng');
@@ -94,9 +107,10 @@ export const adminApi = {
 
   updateUser: async (id, userData) => {
     try {
-      const { data } = await api.put(`/admin/users/${id}`, userData);
-      return data;
-    } catch {
+      const response = await api.put(`/admin/users/${id}`, userData);
+      return response.data?.data || response.data;
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
       const users = getStoredUsers();
       const idx = users.findIndex((u) => String(u.id) === String(id));
       if (idx !== -1) {
@@ -110,9 +124,10 @@ export const adminApi = {
 
   toggleUserEnabled: async (id) => {
     try {
-      const { data } = await api.patch(`/admin/users/${id}/toggle-enabled`);
-      return data;
-    } catch {
+      const response = await api.patch(`/admin/users/${id}/toggle-enabled`);
+      return response.data?.data || response.data;
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
       const users = getStoredUsers();
       const user = users.find((u) => String(u.id) === String(id));
       if (user) {

@@ -38,8 +38,8 @@ export default function ProfilePage() {
       const updated = await authApi.updateProfile(profileForm);
       updateUser(updated);
       toast.success('Cập nhật thông tin thành công');
-    } catch {
-      toast.error('Không thể cập nhật thông tin');
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Không thể cập nhật thông tin');
     } finally {
       setSaving(false);
     }
@@ -51,8 +51,8 @@ export default function ProfilePage() {
       toast.error('Mật khẩu mới không khớp');
       return;
     }
-    if (passwordForm.newPassword.length < 6) {
-      toast.error('Mật khẩu mới ít nhất 6 ký tự');
+    if (passwordForm.newPassword.length < 8 || !/^(?=.*[A-Za-z])(?=.*\d)/.test(passwordForm.newPassword)) {
+      toast.error('Mật khẩu mới phải từ 8 ký tự, bao gồm cả chữ và số');
       return;
     }
     setSavingPass(true);
@@ -64,7 +64,7 @@ export default function ProfilePage() {
       toast.success('Đổi mật khẩu thành công');
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Đổi mật khẩu thất bại');
+      toast.error(err.response?.data?.message || err.message || 'Đổi mật khẩu thất bại');
     } finally {
       setSavingPass(false);
     }
@@ -176,7 +176,7 @@ export default function ProfilePage() {
                     value={passwordForm.newPassword}
                     onChange={setPw('newPassword')}
                     icon={<Lock size={16} />}
-                    hint="Ít nhất 6 ký tự"
+                    hint="Ít nhất 8 ký tự, gồm cả chữ và số"
                     required
                   />
                   <Input

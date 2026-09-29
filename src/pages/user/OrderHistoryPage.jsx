@@ -73,29 +73,40 @@ export default function OrderHistoryPage() {
                         </div>
 
                         {/* Items */}
-                        {order.items?.map((item) => (
-                          <div key={item.id} className="order-item">
-                            <img
-                              src={item.book?.coverImageUrl || DEFAULT_BOOK_COVER}
-                              alt={item.book?.title}
-                              className="order-item-img"
-                              onError={(e) => { e.target.src = DEFAULT_BOOK_COVER; }}
-                            />
-                            <div className="order-item-info">
-                              <Link to={`/books/${item.book?.id}`} className="order-item-title">
-                                {item.book?.title}
-                              </Link>
-                              <div className="order-item-author">{item.book?.author}</div>
-                              <div className="order-item-qty-price">
-                                <span>x{item.quantity}</span>
-                                <span>{formatCurrency(item.price)}</span>
+                        {/* TODO: [ORDER-ITEM-DTO] Gỡ bỏ map kép phẳng/lồng sau khi Backend hoàn thiện OrderItemResponseDTO ở Plan 2 */}
+                        {order.items?.map((item) => {
+                          const bookId = item.book?.id || item.bookId;
+                          const bookTitle = item.book?.title || item.bookTitle || 'Sách';
+                          const bookAuthor = item.book?.author || item.bookAuthor || '';
+                          const coverUrl = item.book?.coverImageUrl || item.coverImageUrl || DEFAULT_BOOK_COVER;
+                          return (
+                            <div key={item.id} className="order-item">
+                              <img
+                                src={coverUrl}
+                                alt={bookTitle}
+                                className="order-item-img"
+                                onError={(e) => { e.target.src = DEFAULT_BOOK_COVER; }}
+                              />
+                              <div className="order-item-info">
+                                {bookId ? (
+                                  <Link to={`/books/${bookId}`} className="order-item-title">
+                                    {bookTitle}
+                                  </Link>
+                                ) : (
+                                  <span className="order-item-title">{bookTitle}</span>
+                                )}
+                                {bookAuthor && <div className="order-item-author">{bookAuthor}</div>}
+                                <div className="order-item-qty-price">
+                                  <span>x{item.quantity}</span>
+                                  <span>{formatCurrency(item.price)}</span>
+                                </div>
+                              </div>
+                              <div className="order-item-total">
+                                {formatCurrency(item.subtotal || item.price * item.quantity)}
                               </div>
                             </div>
-                            <div className="order-item-total">
-                              {formatCurrency(item.price * item.quantity)}
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
 
                         {/* Totals */}
                         <div className="order-totals">

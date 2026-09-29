@@ -17,16 +17,21 @@ const getStoredOrders = () => {
   }
 };
 
-const saveOrders = (orders) => {
-  localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
+const isOfflineOrUnimplemented = (err) => {
+  if (!err?.response) return true; // Mất mạng / Backend chưa bật
+  if (err.response.status === 502) return true; // Vite proxy Bad Gateway
+  if (err.response.status === 404) return true; // Endpoint Backend chưa viết
+  return false;
 };
 
 export const orderApi = {
   createOrder: async (orderData) => {
     try {
-      const { data } = await api.post('/orders', orderData);
-      return data;
-    } catch {
+      const response = await api.post('/orders', orderData);
+      // TODO: [DTO-UNWRAP] Gỡ unwrap sau khi Backend chuẩn hóa ApiResponse<T>
+      return response.data?.data || response.data;
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
       const orders = getStoredOrders();
       const cartData = await cartApi.getCart();
       const items = cartData.items || [];
@@ -63,9 +68,11 @@ export const orderApi = {
 
   getMyOrders: async (params = {}) => {
     try {
-      const { data } = await api.get('/orders/my', { params });
-      return data;
-    } catch {
+      const response = await api.get('/orders/my-orders', { params });
+      // TODO: [DTO-UNWRAP] Gỡ unwrap sau khi Backend chuẩn hóa ApiResponse<T>
+      return response.data?.data || response.data;
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
       const orders = getStoredOrders();
       return {
         content: orders,
@@ -76,9 +83,11 @@ export const orderApi = {
 
   getOrder: async (id) => {
     try {
-      const { data } = await api.get(`/orders/${id}`);
-      return data;
-    } catch {
+      const response = await api.get(`/orders/${id}`);
+      // TODO: [DTO-UNWRAP] Gỡ unwrap sau khi Backend chuẩn hóa ApiResponse<T>
+      return response.data?.data || response.data;
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
       const orders = getStoredOrders();
       const order = orders.find((o) => String(o.id) === String(id));
       if (!order) throw new Error('Không tìm thấy đơn hàng');
@@ -88,9 +97,11 @@ export const orderApi = {
 
   cancelOrder: async (id) => {
     try {
-      const { data } = await api.patch(`/orders/${id}/cancel`);
-      return data;
-    } catch {
+      const response = await api.put(`/orders/${id}/cancel`);
+      // TODO: [DTO-UNWRAP] Gỡ unwrap sau khi Backend chuẩn hóa ApiResponse<T>
+      return response.data?.data || response.data;
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
       const orders = getStoredOrders();
       const order = orders.find((o) => String(o.id) === String(id));
       if (order) {
@@ -104,9 +115,11 @@ export const orderApi = {
   // Admin
   getAllOrders: async (params = {}) => {
     try {
-      const { data } = await api.get('/admin/orders', { params });
-      return data;
-    } catch {
+      const response = await api.get('/admin/orders', { params });
+      // TODO: [DTO-UNWRAP] Gỡ unwrap sau khi Backend chuẩn hóa ApiResponse<T>
+      return response.data?.data || response.data;
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
       let orders = getStoredOrders();
       if (params.status) {
         orders = orders.filter((o) => o.status === params.status);
@@ -120,9 +133,11 @@ export const orderApi = {
 
   updateOrderStatus: async (id, status) => {
     try {
-      const { data } = await api.patch(`/admin/orders/${id}/status`, { status });
-      return data;
-    } catch {
+      const response = await api.put(`/admin/orders/${id}/status`, { status });
+      // TODO: [DTO-UNWRAP] Gỡ unwrap sau khi Backend chuẩn hóa ApiResponse<T>
+      return response.data?.data || response.data;
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
       const orders = getStoredOrders();
       const order = orders.find((o) => String(o.id) === String(id));
       if (order) {
