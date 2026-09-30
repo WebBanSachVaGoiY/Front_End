@@ -20,8 +20,7 @@ export default function LoginPage() {
 
   const validate = () => {
     const errs = {};
-    if (!form.email) errs.email = 'Vui lòng nhập email';
-    else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = 'Email không hợp lệ';
+    if (!form.email?.trim()) errs.email = 'Vui lòng nhập email hoặc tên đăng nhập';
     if (!form.password) errs.password = 'Vui lòng nhập mật khẩu';
     return errs;
   };
@@ -75,15 +74,15 @@ export default function LoginPage() {
         <form className="auth-form" onSubmit={handleSubmit} noValidate>
           <Input
             id="email"
-            type="email"
-            label="Email"
-            placeholder="your@email.com"
+            type="text"
+            label="Email hoặc Tên đăng nhập"
+            placeholder="admin4 hoặc your@email.com"
             value={form.email}
             onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
             icon={<Mail size={16} />}
             error={errors.email}
             required
-            autoComplete="email"
+            autoComplete="username"
           />
 
           <Input
@@ -133,7 +132,7 @@ export default function LoginPage() {
               type="button"
               className="btn btn-secondary btn-sm"
               style={{ flex: 1, fontSize: '0.75rem' }}
-              onClick={() => setForm({ email: 'user@bookrunner.vn', password: 'password123' })}
+              onClick={() => setForm({ email: 'taivankhoanso1@gmail.com', password: 'Password123' })}
             >
               👤 Khách hàng
             </button>
@@ -141,7 +140,7 @@ export default function LoginPage() {
               type="button"
               className="btn btn-secondary btn-sm"
               style={{ flex: 1, fontSize: '0.75rem' }}
-              onClick={() => setForm({ email: 'admin@bookrunner.vn', password: 'password123' })}
+              onClick={() => setForm({ email: 'admin4@bookrunner.vn', password: 'Password123' })}
             >
               🔑 Quản trị viên
             </button>

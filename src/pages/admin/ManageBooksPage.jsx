@@ -45,12 +45,14 @@ export default function ManageBooksPage() {
   }, []);
 
   const openCreate = () => {
+    bookApi.getCategories().then(setCategories).catch(() => {});
     setEditingBook(null);
     setForm(EMPTY_BOOK);
     setModalOpen(true);
   };
 
   const openEdit = (book) => {
+    bookApi.getCategories().then(setCategories).catch(() => {});
     setEditingBook(book);
     setForm({
       title: book.title || '',
@@ -256,13 +258,18 @@ export default function ManageBooksPage() {
             <Input id="book-discount" label="Giá khuyến mãi (₫)" type="number" value={form.discountPrice} onChange={setF('discountPrice')} />
             <Input id="book-stock" label="Số lượng kho" type="number" value={form.stockQuantity} onChange={setF('stockQuantity')} />
             <div className="form-group">
-              <label className="form-label">Danh mục</label>
-              <select className="form-input" value={form.categoryId} onChange={setF('categoryId')}>
+              <label className="form-label">Danh mục *</label>
+              <select className="form-input" value={form.categoryId} onChange={setF('categoryId')} required>
                 <option value="">— Chọn danh mục —</option>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
+              {categories.length === 0 && (
+                <small style={{ color: 'var(--accent)', marginTop: 4, display: 'block', fontSize: '0.75rem' }}>
+                  ⚠️ Chưa có danh mục nào. Hãy vào mục "Quản lý danh mục" để tạo trước!
+                </small>
+              )}
             </div>
             <Input id="book-year" label="Năm XB" type="number" value={form.publicationYear} onChange={setF('publicationYear')} />
             <Input id="book-pages" label="Số trang" type="number" value={form.pageCount} onChange={setF('pageCount')} />
