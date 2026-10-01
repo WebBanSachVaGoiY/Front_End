@@ -23,12 +23,36 @@ const isOfflineOrUnimplemented = (err) => {
   return false;
 };
 
+// Normalizes backend CartItemDTO or local items to standard UI item structure
+const normalizeCartItems = (rawList = []) => {
+  return rawList.map((it) => {
+    if (it.book) return it;
+    return {
+      id: it.bookId,
+      bookId: it.bookId,
+      cartId: it.cartId,
+      quantity: it.quantity,
+      book: {
+        id: it.bookId,
+        title: it.productName,
+        coverImageUrl: it.imageUrl,
+        price: Number(it.originalPrice || it.unitPrice || 0),
+        discountPrice: Number(it.unitPrice || it.originalPrice || 0),
+        stockQuantity: it.availableStock != null ? it.availableStock : 999,
+        active: it.isActive,
+      },
+    };
+  });
+};
+
 export const cartApi = {
   getCart: async () => {
     try {
       const response = await api.get('/cart');
-      // TODO: [DTO-UNWRAP] Gỡ unwrap sau khi Backend chuẩn hóa ApiResponse<T>
-      return response.data?.data || response.data;
+      const data = response.data?.data || response.data;
+      const rawList = data?.cartItemDTOList || data?.items || [];
+      const items = normalizeCartItems(rawList);
+      return { ...data, items };
     } catch (err) {
       if (!isOfflineOrUnimplemented(err)) throw err;
       const items = getStoredCartItems();
@@ -38,8 +62,7 @@ export const cartApi = {
 
   addItem: async ({ bookId, quantity = 1 }) => {
     try {
-      const response = await api.post('/cart/items', { bookId, quantity });
-      // TODO: [DTO-UNWRAP] Gỡ unwrap sau khi Backend chuẩn hóa ApiResponse<T>
+      const response = await api.post('/cart/items', { bookId: Number(bookId), quantity: Number(quantity) });
       return response.data?.data || response.data;
     } catch (err) {
       if (!isOfflineOrUnimplemented(err)) throw err;
@@ -62,16 +85,15 @@ export const cartApi = {
 
   updateItem: async (itemId, { quantity }) => {
     try {
-      const response = await api.put(`/cart/items/${itemId}`, { quantity });
-      // TODO: [DTO-UNWRAP] Gỡ unwrap sau khi Backend chuẩn hóa ApiResponse<T>
+      const response = await api.put(`/cart/items/${itemId}`, { quantity: Number(quantity) });
       return response.data?.data || response.data;
     } catch (err) {
       if (!isOfflineOrUnimplemented(err)) throw err;
       let items = getStoredCartItems();
       if (quantity <= 0) {
-        items = items.filter((it) => String(it.id) !== String(itemId));
+        items = items.filter((it) => String(it.id) !== String(itemId) && String(it.book?.id) !== String(itemId));
       } else {
-        const item = items.find((it) => String(it.id) === String(itemId));
+        const item = items.find((it) => String(it.id) === String(itemId) || String(it.book?.id) === String(itemId));
         if (item) item.quantity = quantity;
       }
       saveCartItems(items);
@@ -82,10 +104,14 @@ export const cartApi = {
   removeItem: async (itemId) => {
     try {
       await api.delete(`/cart/items/${itemId}`);
-    } catch (err) {
-      if (!isOfflineOrUnimplemented(err)) throw err;
-      const items = getStoredCartItems().filter((it) => String(it.id) !== String(itemId));
-      saveCartItems(items);
+    } catch {
+      try {
+        await api.delete('/cart/items', { data: [Number(itemId)] });
+      } catch (err) {
+        if (!isOfflineOrUnimplemented(err)) throw err;
+        const items = getStoredCartItems().filter((it) => String(it.id) !== String(itemId) && String(it.book?.id) !== String(itemId));
+        saveCartItems(items);
+      }
     }
   },
 
@@ -93,10 +119,8 @@ export const cartApi = {
     try {
       await api.delete('/cart');
     } catch (err) {
-      // Backend chưa có Cart API (Plan 2 sẽ thêm), bỏ qua lỗi 404/502
       if (!isOfflineOrUnimplemented(err)) throw err;
     } finally {
-      // Đảm bảo localStorage luôn được dọn dẹp sạch sau khi thanh toán thành công
       localStorage.removeItem(CART_KEY);
     }
   },

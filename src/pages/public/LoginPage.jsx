@@ -132,7 +132,7 @@ export default function LoginPage() {
               type="button"
               className="btn btn-secondary btn-sm"
               style={{ flex: 1, fontSize: '0.75rem' }}
-              onClick={() => setForm({ email: 'taivankhoanso1@gmail.com', password: 'Password123' })}
+              onClick={() => setForm({ email: 'taivankhoanso2@gmail.com', password: 'Password123' })}
             >
               👤 Khách hàng
             </button>
