@@ -81,7 +81,7 @@ export default function ManageOrdersPage() {
         </div>
         <select
           className="form-input"
-          style={{ width: 180, height: 40 }}
+          style={{ width: 180, height: 50 }}
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
         >

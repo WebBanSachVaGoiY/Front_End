@@ -23,12 +23,54 @@ const isOfflineOrUnimplemented = (err) => {
   return false;
 };
 
+/**
+ * Adapter ánh xạ CartDTO từ Backend Spring Boot sang format mà Frontend UI cần.
+ *
+ * Backend trả về (CartDTO):
+ *   { userId, cartItemDTOList: [{ cartId, bookId, productName, imageUrl, quantity,
+ *     originalPrice, unitPrice, availableStock, isActive }], totalQuantity, totalPrice }
+ *
+ * Frontend UI mong đợi:
+ *   { items: [{ id, quantity, book: { id, title, price, discountPrice,
+ *     coverImageUrl, stockQuantity, active } }], totalQuantity, totalPrice }
+ */
+const normalizeCartData = (cartData) => {
+  if (!cartData) return { items: [], totalQuantity: 0, totalPrice: 0 };
+
+  // Nếu dữ liệu đã ở dạng items (mock data hoặc format cũ) → trả nguyên
+  if (Array.isArray(cartData.items)) {
+    return cartData;
+  }
+
+  // Ánh xạ cartItemDTOList → items
+  const rawList = cartData.cartItemDTOList || [];
+  const items = rawList.map((item) => ({
+    id: item.bookId || item.cartId,
+    cartId: item.cartId,
+    quantity: item.quantity,
+    book: {
+      id: item.bookId,
+      title: item.productName || 'Sách',
+      coverImageUrl: item.imageUrl,
+      price: item.originalPrice || 0,
+      discountPrice: item.unitPrice,
+      stockQuantity: item.availableStock || 99,
+      active: item.isActive !== false,
+    },
+  }));
+
+  return {
+    ...cartData,
+    items,
+  };
+};
+
 export const cartApi = {
   getCart: async () => {
     try {
       const response = await api.get('/cart');
-      // TODO: [DTO-UNWRAP] Gỡ unwrap sau khi Backend chuẩn hóa ApiResponse<T>
-      return response.data?.data || response.data;
+      const raw = response.data?.data || response.data;
+      return normalizeCartData(raw);
     } catch (err) {
       if (!isOfflineOrUnimplemented(err)) throw err;
       const items = getStoredCartItems();
@@ -39,8 +81,8 @@ export const cartApi = {
   addItem: async ({ bookId, quantity = 1 }) => {
     try {
       const response = await api.post('/cart/items', { bookId, quantity });
-      // TODO: [DTO-UNWRAP] Gỡ unwrap sau khi Backend chuẩn hóa ApiResponse<T>
-      return response.data?.data || response.data;
+      const raw = response.data?.data || response.data;
+      return normalizeCartData(raw);
     } catch (err) {
       if (!isOfflineOrUnimplemented(err)) throw err;
       const items = getStoredCartItems();
@@ -63,8 +105,8 @@ export const cartApi = {
   updateItem: async (itemId, { quantity }) => {
     try {
       const response = await api.put(`/cart/items/${itemId}`, { quantity });
-      // TODO: [DTO-UNWRAP] Gỡ unwrap sau khi Backend chuẩn hóa ApiResponse<T>
-      return response.data?.data || response.data;
+      const raw = response.data?.data || response.data;
+      return normalizeCartData(raw);
     } catch (err) {
       if (!isOfflineOrUnimplemented(err)) throw err;
       let items = getStoredCartItems();
@@ -89,11 +131,24 @@ export const cartApi = {
     }
   },
 
+  /** Xóa nhiều sản phẩm cùng lúc theo danh sách bookId — khớp DELETE /cart/items (body: List<Long>) */
+  deleteItems: async (bookIds = []) => {
+    try {
+      await api.delete('/cart/items', { data: bookIds });
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
+      const idSet = new Set(bookIds.map(String));
+      const items = getStoredCartItems().filter(
+        (it) => !idSet.has(String(it.id)) && !idSet.has(String(it.book?.id))
+      );
+      saveCartItems(items);
+    }
+  },
+
   clearCart: async () => {
     try {
       await api.delete('/cart');
     } catch (err) {
-      // Backend chưa có Cart API (Plan 2 sẽ thêm), bỏ qua lỗi 404/502
       if (!isOfflineOrUnimplemented(err)) throw err;
     } finally {
       // Đảm bảo localStorage luôn được dọn dẹp sạch sau khi thanh toán thành công

@@ -23,9 +23,12 @@ const isOfflineOrUnimplemented = (err) => {
   return false;
 };
 
-// TODO: [ADMIN-STATS-USERS-BE] Backend chưa có Controller thống kê (/admin/stats/**) và quản lý User (/admin/users/**).
 export const adminApi = {
-  // Dashboard stats
+  // ──────────────────────────────────────────────────────
+  // Dashboard stats — Backend chưa có Controller /admin/stats/**
+  // Các hàm dưới đây sẽ tự động dùng dữ liệu thật khi Backend triển khai,
+  // hiện tại fallback sang mock data.
+  // ──────────────────────────────────────────────────────
   getStats: async () => {
     try {
       const response = await api.get('/admin/stats');
@@ -77,7 +80,13 @@ export const adminApi = {
     }
   },
 
-  // User management
+  // ──────────────────────────────────────────────────────
+  // User management — Khớp với AdminUserController (Spring Boot)
+  // Endpoints: GET /admin/users, GET /admin/users/{id},
+  //            PUT /admin/users/{id}, PATCH /admin/users/{id}/toggle-enabled
+  // ──────────────────────────────────────────────────────
+
+  /** Lấy danh sách người dùng phân trang — GET /api/v1/admin/users */
   getUsers: async (params = {}) => {
     try {
       const response = await api.get('/admin/users', { params });
@@ -92,6 +101,7 @@ export const adminApi = {
     }
   },
 
+  /** Xem chi tiết một người dùng — GET /api/v1/admin/users/{id} */
   getUser: async (id) => {
     try {
       const response = await api.get(`/admin/users/${id}`);
@@ -105,6 +115,10 @@ export const adminApi = {
     }
   },
 
+  /**
+   * Cập nhật thông tin / phân quyền người dùng — PUT /api/v1/admin/users/{id}
+   * Body khớp AdminUpdateUserRequest: { fullName, phone, address, role, enabled }
+   */
   updateUser: async (id, userData) => {
     try {
       const response = await api.put(`/admin/users/${id}`, userData);
@@ -122,6 +136,7 @@ export const adminApi = {
     }
   },
 
+  /** Bật / tắt trạng thái hoạt động tài khoản — PATCH /api/v1/admin/users/{id}/toggle-enabled */
   toggleUserEnabled: async (id) => {
     try {
       const response = await api.patch(`/admin/users/${id}/toggle-enabled`);
