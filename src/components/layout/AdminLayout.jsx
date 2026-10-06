@@ -1,12 +1,13 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import {
-  LayoutDashboard, BookOpen, Package, Users, ChevronRight, LogOut, BookMarked,
+  LayoutDashboard, BookOpen, FolderTree, Package, Users, ChevronRight, LogOut, BookMarked,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import './AdminLayout.css';
 
 const NAV_ITEMS = [
   { to: '/admin', icon: <LayoutDashboard size={18} />, label: 'Dashboard', end: true },
+  { to: '/admin/categories', icon: <FolderTree size={18} />, label: 'Quản lý danh mục' },
   { to: '/admin/books', icon: <BookOpen size={18} />, label: 'Quản lý sách' },
   { to: '/admin/orders', icon: <Package size={18} />, label: 'Quản lý đơn hàng' },
   { to: '/admin/users', icon: <Users size={18} />, label: 'Quản lý người dùng' },

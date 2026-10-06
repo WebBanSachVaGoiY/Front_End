@@ -23,6 +23,7 @@ const isOfflineOrUnimplemented = (err) => {
   return false;
 };
 
+<<<<<<< HEAD
 /**
  * Adapter ánh xạ CartDTO từ Backend Spring Boot sang format mà Frontend UI cần.
  *
@@ -63,14 +64,43 @@ const normalizeCartData = (cartData) => {
     ...cartData,
     items,
   };
+=======
+// Normalizes backend CartItemDTO or local items to standard UI item structure
+const normalizeCartItems = (rawList = []) => {
+  return rawList.map((it) => {
+    if (it.book) return it;
+    return {
+      id: it.bookId,
+      bookId: it.bookId,
+      cartId: it.cartId,
+      quantity: it.quantity,
+      book: {
+        id: it.bookId,
+        title: it.productName,
+        coverImageUrl: it.imageUrl,
+        price: Number(it.originalPrice || it.unitPrice || 0),
+        discountPrice: Number(it.unitPrice || it.originalPrice || 0),
+        stockQuantity: it.availableStock != null ? it.availableStock : 999,
+        active: it.isActive,
+      },
+    };
+  });
+>>>>>>> 0fdceb37db020aa53fd02a03103f577df03ddd4c
 };
 
 export const cartApi = {
   getCart: async () => {
     try {
       const response = await api.get('/cart');
+<<<<<<< HEAD
       const raw = response.data?.data || response.data;
       return normalizeCartData(raw);
+=======
+      const data = response.data?.data || response.data;
+      const rawList = data?.cartItemDTOList || data?.items || [];
+      const items = normalizeCartItems(rawList);
+      return { ...data, items };
+>>>>>>> 0fdceb37db020aa53fd02a03103f577df03ddd4c
     } catch (err) {
       if (!isOfflineOrUnimplemented(err)) throw err;
       const items = getStoredCartItems();
@@ -80,9 +110,14 @@ export const cartApi = {
 
   addItem: async ({ bookId, quantity = 1 }) => {
     try {
+<<<<<<< HEAD
       const response = await api.post('/cart/items', { bookId, quantity });
       const raw = response.data?.data || response.data;
       return normalizeCartData(raw);
+=======
+      const response = await api.post('/cart/items', { bookId: Number(bookId), quantity: Number(quantity) });
+      return response.data?.data || response.data;
+>>>>>>> 0fdceb37db020aa53fd02a03103f577df03ddd4c
     } catch (err) {
       if (!isOfflineOrUnimplemented(err)) throw err;
       const items = getStoredCartItems();
@@ -104,16 +139,21 @@ export const cartApi = {
 
   updateItem: async (itemId, { quantity }) => {
     try {
+<<<<<<< HEAD
       const response = await api.put(`/cart/items/${itemId}`, { quantity });
       const raw = response.data?.data || response.data;
       return normalizeCartData(raw);
+=======
+      const response = await api.put(`/cart/items/${itemId}`, { quantity: Number(quantity) });
+      return response.data?.data || response.data;
+>>>>>>> 0fdceb37db020aa53fd02a03103f577df03ddd4c
     } catch (err) {
       if (!isOfflineOrUnimplemented(err)) throw err;
       let items = getStoredCartItems();
       if (quantity <= 0) {
-        items = items.filter((it) => String(it.id) !== String(itemId));
+        items = items.filter((it) => String(it.id) !== String(itemId) && String(it.book?.id) !== String(itemId));
       } else {
-        const item = items.find((it) => String(it.id) === String(itemId));
+        const item = items.find((it) => String(it.id) === String(itemId) || String(it.book?.id) === String(itemId));
         if (item) item.quantity = quantity;
       }
       saveCartItems(items);
@@ -124,10 +164,14 @@ export const cartApi = {
   removeItem: async (itemId) => {
     try {
       await api.delete(`/cart/items/${itemId}`);
-    } catch (err) {
-      if (!isOfflineOrUnimplemented(err)) throw err;
-      const items = getStoredCartItems().filter((it) => String(it.id) !== String(itemId));
-      saveCartItems(items);
+    } catch {
+      try {
+        await api.delete('/cart/items', { data: [Number(itemId)] });
+      } catch (err) {
+        if (!isOfflineOrUnimplemented(err)) throw err;
+        const items = getStoredCartItems().filter((it) => String(it.id) !== String(itemId) && String(it.book?.id) !== String(itemId));
+        saveCartItems(items);
+      }
     }
   },
 
@@ -151,7 +195,6 @@ export const cartApi = {
     } catch (err) {
       if (!isOfflineOrUnimplemented(err)) throw err;
     } finally {
-      // Đảm bảo localStorage luôn được dọn dẹp sạch sau khi thanh toán thành công
       localStorage.removeItem(CART_KEY);
     }
   },
