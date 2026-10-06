@@ -104,8 +104,8 @@ export default function ManageCategoriesPage() {
       }
       setModalOpen(false);
       fetchCategories();
-    } catch {
-      toast.error(editingCategory ? 'Lỗi khi cập nhật danh mục' : 'Lỗi khi thêm danh mục');
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || (editingCategory ? 'Lỗi khi cập nhật danh mục' : 'Lỗi khi thêm danh mục'));
     } finally {
       setSaving(false);
     }
@@ -118,8 +118,8 @@ export default function ManageCategoriesPage() {
       await bookApi.deleteCategory(id);
       toast.success('Xóa danh mục thành công');
       fetchCategories();
-    } catch {
-      toast.error('Xóa danh mục thất bại');
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Xóa danh mục thất bại');
     } finally {
       setDeleting(null);
     }

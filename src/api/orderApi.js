@@ -17,6 +17,10 @@ const getStoredOrders = () => {
   }
 };
 
+const saveOrders = (orders) => {
+  localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
+};
+
 const isOfflineOrUnimplemented = (err) => {
   if (!err?.response) return true; // Mất mạng / Backend chưa bật
   if (err.response.status === 502) return true; // Vite proxy Bad Gateway

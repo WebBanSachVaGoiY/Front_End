@@ -10,7 +10,7 @@ import { Footer } from '../../components/layout/Footer';
 import { Button } from '../../components/ui/Button';
 import { Spinner } from '../../components/ui/Spinner';
 import { formatCurrency } from '../../utils/formatCurrency';
-import { DEFAULT_BOOK_COVER, SHIPPING_FEE } from '../../utils/constants';
+import { DEFAULT_BOOK_COVER } from '../../utils/constants';
 import { voucherApi } from '../../api/voucherApi';
 import './CartPage.css';
 

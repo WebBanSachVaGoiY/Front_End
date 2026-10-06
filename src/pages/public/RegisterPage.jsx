@@ -56,7 +56,7 @@ export default function RegisterPage() {
       toast.success('Đăng ký thành công! Vui lòng đăng nhập.');
       navigate('/login');
     } catch (err) {
-      const msg = err.response?.data?.message || 'Đăng ký thất bại, vui lòng thử lại';
+      const msg = err.message || err.response?.data?.message || 'Đăng ký thất bại, vui lòng thử lại';
       toast.error(msg);
       if (msg.toLowerCase().includes('email')) {
         setErrors({ email: 'Email này đã được sử dụng' });

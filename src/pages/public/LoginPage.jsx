@@ -39,7 +39,7 @@ export default function LoginPage() {
       toast.success('Đăng nhập thành công! Chào mừng trở lại 👋');
       navigate(from, { replace: true });
     } catch (err) {
-      const msg = err.response?.data?.message || 'Email hoặc mật khẩu không đúng';
+      const msg = err.message || err.response?.data?.message || 'Email hoặc mật khẩu không đúng';
       toast.error(msg);
       setErrors({ api: msg });
     } finally {
