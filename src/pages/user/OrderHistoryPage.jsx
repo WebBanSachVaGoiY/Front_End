@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, ChevronDown, ChevronUp, Eye } from 'lucide-react';
+import { Package, ChevronDown, ChevronUp } from 'lucide-react';
 import { orderApi } from '../../api/orderApi';
 import { Navbar } from '../../components/layout/Navbar';
 import { Footer } from '../../components/layout/Footer';

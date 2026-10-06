@@ -23,7 +23,6 @@ const isOfflineOrUnimplemented = (err) => {
   return false;
 };
 
-<<<<<<< HEAD
 /**
  * Adapter ánh xạ CartDTO từ Backend Spring Boot sang format mà Frontend UI cần.
  *
@@ -32,75 +31,49 @@ const isOfflineOrUnimplemented = (err) => {
  *     originalPrice, unitPrice, availableStock, isActive }], totalQuantity, totalPrice }
  *
  * Frontend UI mong đợi:
- *   { items: [{ id, quantity, book: { id, title, price, discountPrice,
+ *   { items: [{ id, bookId, cartId, quantity, book: { id, title, price, discountPrice,
  *     coverImageUrl, stockQuantity, active } }], totalQuantity, totalPrice }
  */
 const normalizeCartData = (cartData) => {
   if (!cartData) return { items: [], totalQuantity: 0, totalPrice: 0 };
 
-  // Nếu dữ liệu đã ở dạng items (mock data hoặc format cũ) → trả nguyên
-  if (Array.isArray(cartData.items)) {
-    return cartData;
-  }
-
-  // Ánh xạ cartItemDTOList → items
-  const rawList = cartData.cartItemDTOList || [];
-  const items = rawList.map((item) => ({
-    id: item.bookId || item.cartId,
-    cartId: item.cartId,
-    quantity: item.quantity,
-    book: {
-      id: item.bookId,
-      title: item.productName || 'Sách',
-      coverImageUrl: item.imageUrl,
-      price: item.originalPrice || 0,
-      discountPrice: item.unitPrice,
-      stockQuantity: item.availableStock || 99,
-      active: item.isActive !== false,
-    },
-  }));
-
-  return {
-    ...cartData,
-    items,
-  };
-=======
-// Normalizes backend CartItemDTO or local items to standard UI item structure
-const normalizeCartItems = (rawList = []) => {
-  return rawList.map((it) => {
+  const rawList = cartData.cartItemDTOList || cartData.items || (Array.isArray(cartData) ? cartData : []);
+  const items = rawList.map((it) => {
     if (it.book) return it;
     return {
-      id: it.bookId,
+      id: it.bookId ?? it.cartId,
       bookId: it.bookId,
       cartId: it.cartId,
       quantity: it.quantity,
       book: {
         id: it.bookId,
-        title: it.productName,
+        title: it.productName || 'Sách',
         coverImageUrl: it.imageUrl,
         price: Number(it.originalPrice || it.unitPrice || 0),
-        discountPrice: Number(it.unitPrice || it.originalPrice || 0),
-        stockQuantity: it.availableStock != null ? it.availableStock : 999,
-        active: it.isActive,
+        discountPrice: it.unitPrice != null ? Number(it.unitPrice) : Number(it.originalPrice || 0),
+        stockQuantity: it.availableStock != null ? it.availableStock : 99,
+        active: it.isActive !== false,
       },
     };
   });
->>>>>>> 0fdceb37db020aa53fd02a03103f577df03ddd4c
+
+  return {
+    ...cartData,
+    items,
+    totalQuantity: cartData.totalQuantity ?? items.reduce((sum, it) => sum + (it.quantity || 0), 0),
+    totalPrice: cartData.totalPrice ? Number(cartData.totalPrice) : items.reduce((sum, it) => {
+      const p = it.book?.discountPrice || it.book?.price || 0;
+      return sum + p * (it.quantity || 1);
+    }, 0),
+  };
 };
 
 export const cartApi = {
   getCart: async () => {
     try {
       const response = await api.get('/cart');
-<<<<<<< HEAD
-      const raw = response.data?.data || response.data;
-      return normalizeCartData(raw);
-=======
       const data = response.data?.data || response.data;
-      const rawList = data?.cartItemDTOList || data?.items || [];
-      const items = normalizeCartItems(rawList);
-      return { ...data, items };
->>>>>>> 0fdceb37db020aa53fd02a03103f577df03ddd4c
+      return normalizeCartData(data);
     } catch (err) {
       if (!isOfflineOrUnimplemented(err)) throw err;
       const items = getStoredCartItems();
@@ -110,14 +83,9 @@ export const cartApi = {
 
   addItem: async ({ bookId, quantity = 1 }) => {
     try {
-<<<<<<< HEAD
-      const response = await api.post('/cart/items', { bookId, quantity });
-      const raw = response.data?.data || response.data;
-      return normalizeCartData(raw);
-=======
       const response = await api.post('/cart/items', { bookId: Number(bookId), quantity: Number(quantity) });
-      return response.data?.data || response.data;
->>>>>>> 0fdceb37db020aa53fd02a03103f577df03ddd4c
+      const raw = response.data?.data || response.data;
+      return raw ? normalizeCartData(raw) : null;
     } catch (err) {
       if (!isOfflineOrUnimplemented(err)) throw err;
       const items = getStoredCartItems();
@@ -139,14 +107,9 @@ export const cartApi = {
 
   updateItem: async (itemId, { quantity }) => {
     try {
-<<<<<<< HEAD
-      const response = await api.put(`/cart/items/${itemId}`, { quantity });
-      const raw = response.data?.data || response.data;
-      return normalizeCartData(raw);
-=======
       const response = await api.put(`/cart/items/${itemId}`, { quantity: Number(quantity) });
-      return response.data?.data || response.data;
->>>>>>> 0fdceb37db020aa53fd02a03103f577df03ddd4c
+      const raw = response.data?.data || response.data;
+      return raw ? normalizeCartData(raw) : null;
     } catch (err) {
       if (!isOfflineOrUnimplemented(err)) throw err;
       let items = getStoredCartItems();

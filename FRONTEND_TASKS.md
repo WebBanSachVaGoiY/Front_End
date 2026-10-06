@@ -2,18 +2,19 @@
 
 > **Dự án:** BookRunner — E-Commerce Website & Recommender System  
 > **Repository:** `Front_End` (Branch: `api_fix`)  
-> **Cập nhật lần cuối:** 02/10/2026  
-> **Trạng thái build hiện tại:** `npm run build` thành công 100% (0 lỗi)
+> **Cập nhật lần cuối:** 06/10/2026  
+> **Trạng thái kiểm tra:** `npm run build` thành công 100% (0 lỗi) | `npm run lint` 0 lỗi
 
 ---
 
 ## 🎯 TỔNG QUAN TIẾN ĐỘ
 
-- [x] **Core & Auth:** Đăng nhập, đăng ký, JWT Interceptor tự động refresh token, bảo vệ Route (`ProtectedRoute`, `AdminRoute`, `GuestRoute`).
+- [x] **Core & Auth:** Đăng nhập, đăng ký, JWT Interceptor tự động refresh token, bảo vệ Route (`ProtectedRoute`, `AdminRoute`, `GuestRoute`). Sửa bắt lỗi hiển thị chính xác thông báo từ máy chủ.
 - [x] **Book Public:** Trang chủ (Home), danh sách sách (Filter theo Category, Price, Search, Sort), trang chi tiết sách (Book Detail).
-- [x] **Cart Module (Đã xong Giai đoạn 1):** Bổ sung adapter `normalizeCartData` trong `cartApi.js` ánh xạ `cartItemDTOList` từ Backend sang format items lồng, thêm hàm `deleteItems` xóa hàng loạt.
-- [ ] **Admin & User UI Actions (Đang thực hiện):** Bổ sung các nút bấm, modal tương tác cho các API Backend đã hoàn thiện.
-- [ ] **Quản lý danh mục (Categories):** Xây dựng trang Admin quản lý danh mục.
+- [x] **Cart Module:** Chuẩn hóa adapter `normalizeCartData` trong `cartApi.js` ánh xạ `CartDTO` / `CartItemDTO` từ Spring Boot sang format UI React; bổ sung hàm xóa nhiều `deleteItems`; giải quyết triệt để xung đột Git.
+- [x] **Quản lý danh mục (Categories):** Xây dựng trang Admin quản lý danh mục (`ManageCategoriesPage.jsx`), tích hợp API CRUD danh mục với Backend, đăng ký route và gắn Sidebar Admin.
+- [x] **Độ tin cậy & Fallback Runtime:** Bổ sung hàm `saveOrders` (`orderApi.js`) và `saveUsers` (`authApi.js`), loại bỏ nguy cơ `ReferenceError` khi chạy offline / localStorage fallback. Dọn dẹp toàn bộ import dư thừa.
+- [ ] **Admin & User UI Actions (Đang thực hiện):** Bổ sung các nút bấm, modal tương tác cho các API Backend đã hoàn thiện (Hủy đơn, Toggle Featured, Modal Order Detail, Modal Edit User, Xóa nhiều giỏ hàng).
 - [ ] **Modules chờ Backend:** Review, Voucher, Thống kê Dashboard, RecSys (hiện chạy mock fallback).
 
 ---
@@ -70,30 +71,23 @@ Các API này Backend đã xây dựng hoàn thiện và kiểm thử thành cô
 
 ---
 
-## 🛠️ NHÓM 2: ƯU TIÊN TRUNG BÌNH — XÂY DỰNG TRANG QUẢN LÝ MỚI
+## 🛠️ NHÓM 2: ĐÃ HOÀN THÀNH — XÂY DỰNG TRANG QUẢN LÝ DANH MỤC
 
-Backend đã có toàn bộ CRUD cho danh mục sách ([`CategoryAPI.java`](file:///C:/Users/testu/OneDrive/Máy%20tính/New%20folder%20(2)/book-runner/src/main/java/com/example/bookrunner/controller/CategoryAPI.java)), Frontend cần bổ sung giao diện tương ứng:
+Đã tích hợp đầy đủ CRUD danh mục sách khớp với [`CategoryAPI.java`](file:///C:/Users/testu/OneDrive/Máy%20tính/New%20folder%20(2)/book-runner/src/main/java/com/example/bookrunner/controller/CategoryAPI.java):
 
-### 2.1. Bổ sung API Service cho Category
-- **File:** `src/api/bookApi.js` (hoặc tạo mới `src/api/categoryApi.js`)
-- **Endpoints tích hợp:**
-  - `POST /api/v1/categories` — Thêm danh mục mới (`{ name, description, slug }`)
-  - `PUT /api/v1/categories/{id}` — Cập nhật danh mục
-  - `DELETE /api/v1/categories` — Xóa danh mục theo mảng ID (`List<Long> ids`)
-
-### 2.2. Xây dựng trang `ManageCategoriesPage.jsx`
-- **File tạo mới:** `src/pages/admin/ManageCategoriesPage.jsx`
-- **Mô tả giao diện:**
-  - [ ] Bảng danh sách danh mục (ID, Tên danh mục, Slug, Mô tả, Số lượng sách thuộc danh mục).
-  - [ ] Nút "Thêm danh mục mới" mở Modal (nhập tên, mô tả).
-  - [ ] Nút Sửa & Nút Xóa danh mục (kèm popup xác nhận).
-  - [ ] Thanh tìm kiếm danh mục.
-
-### 2.3. Khai báo Route & Điều hướng Admin Layout
-- **File:** `src/App.jsx` và `src/components/layout/AdminLayout.jsx`
-- **Mô tả công việc:**
-  - [ ] Thêm route `<Route path="categories" element={<ManageCategoriesPage />} />` trong nhóm Admin.
-  - [ ] Thêm menu item "Quản lý danh mục" vào Sidebar của Admin với icon thích hợp (ví dụ `<FolderTree size={18} />` hoặc `<Tag size={18} />`).
+- [x] **2.1. API Service cho Category:**
+  - Bổ sung `getCategories`, `createCategory`, `updateCategory`, `deleteCategory` trong `src/api/bookApi.js`.
+  - Mapping chuẩn xác: `POST /api/v1/categories`, `PUT /api/v1/categories/{id}`, `DELETE /api/v1/categories` (body: `List<Long> ids`).
+- [x] **2.2. Trang `ManageCategoriesPage.jsx`:**
+  - Bảng danh sách danh mục (ID, Tên danh mục, Slug, Mô tả, Thao tác).
+  - Tự động sinh `slug` tiếng Việt không dấu chuẩn SEO khi nhập tên danh mục.
+  - Modal tạo mới và chỉnh sửa danh mục với validation form.
+  - Thao tác xóa danh mục có popup xác nhận.
+  - Tìm kiếm real-time theo tên danh mục, slug, mô tả.
+- [x] **2.3. Khai báo Route & Điều hướng Admin Layout:**
+  - Route `<Route path="categories" element={<ManageCategoriesPage />} />` trong `src/App.jsx`.
+  - Mục menu "Quản lý danh mục" với icon `<FolderTree />` trong `src/components/layout/AdminLayout.jsx`.
+  - Tích hợp cảnh báo và liên kết nhanh trong `ManageBooksPage.jsx` khi hệ thống chưa có danh mục nào.
 
 ---
 

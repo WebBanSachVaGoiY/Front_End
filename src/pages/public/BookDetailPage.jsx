@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
-  ShoppingCart, Zap, ArrowLeft, Minus, Plus,
+  ShoppingCart, Zap, Minus, Plus,
   BookOpen, Building, Calendar, Hash, Globe,
 } from 'lucide-react';
 import { bookApi } from '../../api/bookApi';
@@ -17,7 +17,7 @@ import { RatingDisplay, StarRating } from '../../components/ui/StarRating';
 import { StockBadge } from '../../components/ui/Badge';
 import { BookCard } from '../../components/book/BookCard';
 import { formatCurrency } from '../../utils/formatCurrency';
-import { formatDate, timeAgo } from '../../utils/formatDate';
+import { timeAgo } from '../../utils/formatDate';
 import { DEFAULT_BOOK_COVER } from '../../utils/constants';
 import './BookDetailPage.css';
 

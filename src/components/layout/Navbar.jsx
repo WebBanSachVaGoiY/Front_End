@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import {
-  BookOpen, Search, ShoppingCart, User, LogOut,
+  BookOpen, Search, ShoppingCart, LogOut,
   ChevronDown, Menu, X, Settings, Package, LayoutDashboard,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';

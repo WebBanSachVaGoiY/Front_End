@@ -17,6 +17,10 @@ const getStoredUsers = () => {
   }
 };
 
+const saveUsers = (users) => {
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+};
+
 const isOfflineOrUnimplemented = (err) => {
   if (!err?.response) return true; // Mất mạng / Backend chưa bật
   if (err.response.status === 502) return true; // Vite proxy Bad Gateway
