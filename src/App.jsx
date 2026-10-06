@@ -20,6 +20,7 @@ const OrderHistoryPage = lazy(() => import('./pages/user/OrderHistoryPage'));
 const ProfilePage = lazy(() => import('./pages/user/ProfilePage'));
 
 const DashboardPage = lazy(() => import('./pages/admin/DashboardPage'));
+const ManageCategoriesPage = lazy(() => import('./pages/admin/ManageCategoriesPage'));
 const ManageBooksPage = lazy(() => import('./pages/admin/ManageBooksPage'));
 const ManageOrdersPage = lazy(() => import('./pages/admin/ManageOrdersPage'));
 const ManageUsersPage = lazy(() => import('./pages/admin/ManageUsersPage'));
@@ -50,6 +51,7 @@ export default function App() {
                 {/* Admin Routes */}
                 <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
                   <Route index element={<DashboardPage />} />
+                  <Route path="categories" element={<ManageCategoriesPage />} />
                   <Route path="books" element={<ManageBooksPage />} />
                   <Route path="orders" element={<ManageOrdersPage />} />
                   <Route path="users" element={<ManageUsersPage />} />

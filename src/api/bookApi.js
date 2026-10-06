@@ -2,6 +2,24 @@ import api from './axios';
 import { INITIAL_BOOKS, MOCK_CATEGORIES } from '../utils/mockData';
 
 const BOOKS_KEY = 'bookrunner_books';
+const CATEGORIES_KEY = 'bookrunner_categories';
+
+const getStoredCategories = () => {
+  try {
+    const raw = localStorage.getItem(CATEGORIES_KEY);
+    if (!raw) {
+      localStorage.setItem(CATEGORIES_KEY, JSON.stringify(MOCK_CATEGORIES));
+      return MOCK_CATEGORIES;
+    }
+    return JSON.parse(raw);
+  } catch {
+    return MOCK_CATEGORIES;
+  }
+};
+
+const saveCategories = (categories) => {
+  localStorage.setItem(CATEGORIES_KEY, JSON.stringify(categories));
+};
 
 const getStoredBooks = () => {
   try {
@@ -158,7 +176,53 @@ export const bookApi = {
       return data?.data || data;
     } catch (err) {
       if (!isOfflineOrUnimplemented(err)) throw err;
-      return MOCK_CATEGORIES;
+      return getStoredCategories();
+    }
+  },
+
+  createCategory: async (categoryData) => {
+    try {
+      const { data } = await api.post('/categories', categoryData);
+      return data?.data || data;
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
+      const categories = getStoredCategories();
+      const newCategory = {
+        ...categoryData,
+        id: Date.now(),
+      };
+      categories.push(newCategory);
+      saveCategories(categories);
+      return newCategory;
+    }
+  },
+
+  updateCategory: async (id, categoryData) => {
+    try {
+      const { data } = await api.put(`/categories/${id}`, categoryData);
+      return data?.data || data;
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
+      const categories = getStoredCategories();
+      const idx = categories.findIndex((c) => String(c.id) === String(id));
+      if (idx !== -1) {
+        categories[idx] = { ...categories[idx], ...categoryData };
+        saveCategories(categories);
+        return categories[idx];
+      }
+      throw new Error('Không tìm thấy danh mục');
+    }
+  },
+
+  deleteCategory: async (id) => {
+    try {
+      // Backend CategoryAPI takes @RequestBody List<Long> ids
+      await api.delete('/categories', { data: [Number(id)] });
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
+      const categories = getStoredCategories();
+      const filtered = categories.filter((c) => String(c.id) !== String(id));
+      saveCategories(filtered);
     }
   },
 
