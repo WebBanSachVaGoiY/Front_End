@@ -7,3 +7,30 @@
   font-weight: 600;
   white-space: nowrap;
 }
+
+.badge-clean {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+.status-badge-clean {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  background: transparent;
+  border: none;
+  padding: 0;
+  line-height: 1;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}

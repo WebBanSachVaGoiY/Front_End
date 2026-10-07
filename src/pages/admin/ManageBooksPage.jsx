@@ -120,6 +120,23 @@ export default function ManageBooksPage() {
     }
   };
 
+  const [togglingFeaturedId, setTogglingFeaturedId] = useState(null);
+
+  const handleToggleFeatured = async (bookId, currentFeatured) => {
+    setTogglingFeaturedId(bookId);
+    try {
+      await bookApi.toggleFeatured(bookId);
+      setBooks((prev) =>
+        prev.map((b) => (b.id === bookId ? { ...b, isFeatured: !currentFeatured } : b))
+      );
+      toast.success(currentFeatured ? 'Đã bỏ đánh dấu nổi bật' : 'Đã đánh dấu sách nổi bật ⭐');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Không thể đổi trạng thái nổi bật');
+    } finally {
+      setTogglingFeaturedId(null);
+    }
+  };
+
   const filteredBooks = books.filter(
     (b) =>
       b.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -215,6 +232,15 @@ export default function ManageBooksPage() {
                     </td>
                     <td>
                       <div className="table-actions">
+                        <button
+                          className="table-actions btn-icon-sm"
+                          onClick={() => handleToggleFeatured(book.id, book.isFeatured)}
+                          disabled={togglingFeaturedId === book.id}
+                          title={book.isFeatured ? 'Bỏ nổi bật' : 'Đặt làm sách nổi bật'}
+                          style={{ color: book.isFeatured ? 'var(--accent)' : 'var(--text-muted)' }}
+                        >
+                          <Star size={14} fill={book.isFeatured ? 'var(--accent)' : 'none'} />
+                        </button>
                         <button className="table-actions btn-icon-sm" onClick={() => openEdit(book)} title="Sửa">
                           <Pencil size={14} />
                         </button>

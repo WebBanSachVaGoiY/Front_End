@@ -42,9 +42,36 @@
   flex-shrink: 0;
 }
 
+/* Store Link */
+.sidebar-store-action {
+  padding: var(--space-3) var(--space-3) var(--space-1);
+}
+
+.sidebar-store-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px dashed rgba(37, 99, 235, 0.35);
+  border-radius: var(--radius-md);
+  color: var(--primary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+
+.sidebar-store-link:hover {
+  background: var(--primary);
+  color: white;
+  border-style: solid;
+}
+
 /* Nav */
 .sidebar-nav {
-  padding: var(--space-4) var(--space-3);
+  padding: var(--space-3);
   flex: 1;
   display: flex;
   flex-direction: column;

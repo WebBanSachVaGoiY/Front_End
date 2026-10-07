@@ -1,6 +1,6 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { Link, NavLink, Outlet } from 'react-router-dom';
 import {
-  LayoutDashboard, BookOpen, FolderTree, Package, Users, ChevronRight, LogOut, BookMarked,
+  LayoutDashboard, BookOpen, FolderTree, Package, Users, ChevronRight, LogOut, BookMarked, Store,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import './AdminLayout.css';
@@ -23,6 +23,13 @@ export function AdminLayout() {
         <div className="sidebar-logo">
           <BookMarked size={22} />
           <span>BookRunner <span className="admin-label">Admin</span></span>
+        </div>
+
+        <div className="sidebar-store-action">
+          <Link to="/" className="sidebar-store-link" title="Quay lại trang mua hàng">
+            <Store size={16} />
+            <span>Về trang cửa hàng</span>
+          </Link>
         </div>
 
         <nav className="sidebar-nav">

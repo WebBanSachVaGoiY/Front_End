@@ -39,6 +39,16 @@ export const reviewApi = {
     }
   },
 
+  canUserReview: async (bookId) => {
+    try {
+      const response = await api.get(`/books/${bookId}/can-review`);
+      return response.data?.data || response.data;
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
+      return { canReview: true, hasPurchased: true, alreadyReviewed: false };
+    }
+  },
+
   // TODO: [REVIEW-MODULE-BE] Backend chưa có ReviewController (POST /books/{id}/reviews). Đang dùng mock fallback cho 404/offline.
   createReview: async (reviewData) => {
     try {

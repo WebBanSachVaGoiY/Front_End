@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, ArrowRight, BookOpen, Star, Zap, TrendingUp, Sparkles } from 'lucide-react';
+import { ArrowRight, BookOpen, Star, Zap, TrendingUp, Sparkles } from 'lucide-react';
 import { bookApi } from '../../api/bookApi';
 import { BookCard } from '../../components/book/BookCard';
 import { PageSpinner } from '../../components/ui/Spinner';
@@ -13,23 +13,19 @@ export default function HomePage() {
   const [featuredBooks, setFeaturedBooks] = useState([]);
   const [newBooks, setNewBooks] = useState([]);
   const [recommendedBooks, setRecommendedBooks] = useState([]);
-  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchInput, setSearchInput] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [featured, newer, cats, recommended] = await Promise.all([
+        const [featured, newer, recommended] = await Promise.all([
           bookApi.getFeaturedBooks().catch(() => ({ content: [] })),
           bookApi.getBooks({ sort: 'newest', size: 8 }).catch(() => ({ content: [] })),
-          bookApi.getCategories().catch(() => []),
           bookApi.getRecommendations().catch(() => ({ content: [] })),
         ]);
         setFeaturedBooks(featured.content || featured || []);
         setNewBooks(newer.content || newer || []);
-        setCategories(cats.slice ? cats.slice(0, 8) : []);
         setRecommendedBooks(recommended.content || recommended || []);
       } finally {
         setLoading(false);
@@ -37,13 +33,6 @@ export default function HomePage() {
     };
     fetchData();
   }, []);
-
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (searchInput.trim()) {
-      navigate(`/books?search=${encodeURIComponent(searchInput.trim())}`);
-    }
-  };
 
   const STATS = [
     { icon: <BookOpen size={24} />, value: '10,000+', label: 'Đầu sách' },
@@ -85,34 +74,6 @@ export default function HomePage() {
                 Hàng nghìn đầu sách chất lượng, giá tốt, giao hàng tận nơi.
                 Hệ thống AI gợi ý sách phù hợp với sở thích của bạn.
               </p>
-
-              <form className="hero-search" onSubmit={handleSearch}>
-                <Search size={20} className="hero-search-icon" />
-                <input
-                  type="text"
-                  placeholder="Tìm kiếm tên sách, tác giả..."
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  className="hero-search-input"
-                />
-                <Button type="submit" variant="accent" className="hero-search-btn">
-                  Tìm kiếm
-                </Button>
-              </form>
-
-              <div className="hero-actions">
-                <Button
-                  variant="primary"
-                  size="lg"
-                  icon={<BookOpen size={18} />}
-                  onClick={() => navigate('/books')}
-                >
-                  Xem tất cả sách
-                </Button>
-                <Link to="/books?featured=true" className="hero-link">
-                  Sách nổi bật <ArrowRight size={16} />
-                </Link>
-              </div>
             </div>
           </div>
 
@@ -132,31 +93,26 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Categories */}
-        {categories.length > 0 && (
-          <section className="section">
-            <div className="container">
-              <div className="section-header">
-                <h2 className="section-title">Danh mục sách</h2>
-                <Link to="/books" className="see-all-link">
-                  Xem tất cả <ArrowRight size={16} />
-                </Link>
-              </div>
-              <div className="categories-grid">
-                {categories.map((cat) => (
-                  <Link
-                    key={cat.id}
-                    to={`/books?categoryId=${cat.id}`}
-                    className="category-card"
-                  >
-                    <span className="category-icon">📚</span>
-                    <span className="category-name">{cat.name}</span>
-                  </Link>
-                ))}
+        {/* CTA Banner - Moved up right below hero */}
+        <section className="cta-section">
+          <div className="container">
+            <div className="cta-card">
+              <div className="cta-orb" />
+              <div className="cta-content">
+                <h2>Bắt đầu hành trình đọc sách ngay hôm nay</h2>
+                <p>Đăng ký miễn phí, nhận gợi ý sách cá nhân hoá từ AI</p>
+                <div className="cta-actions">
+                  <Button variant="accent" size="lg" onClick={() => navigate('/register')}>
+                    Đăng ký miễn phí
+                  </Button>
+                  <Button variant="outline" size="lg" onClick={() => navigate('/books')}>
+                    Khám phá ngay
+                  </Button>
+                </div>
               </div>
             </div>
-          </section>
-        )}
+          </div>
+        </section>
 
         {/* Recommended Books */}
         {recommendedBooks.length > 0 && (
@@ -223,27 +179,6 @@ export default function HomePage() {
             </div>
           </section>
         )}
-
-        {/* CTA Banner */}
-        <section className="cta-section">
-          <div className="container">
-            <div className="cta-card">
-              <div className="cta-orb" />
-              <div className="cta-content">
-                <h2>Bắt đầu hành trình đọc sách ngay hôm nay</h2>
-                <p>Đăng ký miễn phí, nhận gợi ý sách cá nhân hoá từ AI</p>
-                <div className="cta-actions">
-                  <Button variant="accent" size="lg" onClick={() => navigate('/register')}>
-                    Đăng ký miễn phí
-                  </Button>
-                  <Button variant="outline" size="lg" onClick={() => navigate('/books')}>
-                    Khám phá ngay
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
 
         <Footer />
       </div>

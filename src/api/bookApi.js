@@ -143,7 +143,7 @@ export const bookApi = {
 
   getFeaturedBooks: async () => {
     try {
-      const res = await api.get('/books', { params: { size: 8, sortBy: 'createdAt', sortDir: 'desc' } });
+      const res = await api.get('/books', { params: { isFeatured: true, size: 8, sortBy: 'createdAt', sortDir: 'desc' } });
       const data = res.data?.data || res.data;
       return data.content || data;
     } catch (err) {

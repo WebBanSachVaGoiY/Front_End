@@ -27,6 +27,21 @@ function cartReducer(state, action) {
       const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
       return { ...state, items, subtotal, totalItems, isLoading: false };
     }
+    case 'UPDATE_ITEM_QTY': {
+      const { itemId, quantity } = action.payload;
+      const items = state.items.map((it) => {
+        if (String(it.id) === String(itemId) || String(it.book?.id) === String(itemId)) {
+          return { ...it, quantity };
+        }
+        return it;
+      });
+      const subtotal = items.reduce((sum, item) => {
+        const price = item.book?.discountPrice || item.book?.price || 0;
+        return sum + price * item.quantity;
+      }, 0);
+      const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+      return { ...state, items, subtotal, totalItems };
+    }
     case 'APPLY_VOUCHER': {
       const discount = action.payload
         ? Math.round(state.subtotal * (action.payload.discount / 100))
@@ -46,17 +61,21 @@ export function CartProvider({ children }) {
   const [state, dispatch] = useReducer(cartReducer, initialState);
   const { isAuthenticated } = useAuth();
 
-  const fetchCart = useCallback(async () => {
+  const fetchCart = useCallback(async (silent = false) => {
     if (!isAuthenticated) {
       dispatch({ type: 'CLEAR_CART' });
       return;
     }
-    dispatch({ type: 'SET_LOADING', payload: true });
+    if (!silent) {
+      dispatch({ type: 'SET_LOADING', payload: true });
+    }
     try {
       const data = await cartApi.getCart();
       dispatch({ type: 'SET_CART', payload: data.items || [] });
     } catch {
-      dispatch({ type: 'SET_LOADING', payload: false });
+      if (!silent) {
+        dispatch({ type: 'SET_LOADING', payload: false });
+      }
     }
   }, [isAuthenticated]);
 
@@ -66,17 +85,37 @@ export function CartProvider({ children }) {
 
   const addToCart = async (bookId, quantity = 1) => {
     await cartApi.addItem({ bookId, quantity });
-    await fetchCart();
+    await fetchCart(true);
   };
 
   const updateQuantity = async (itemId, quantity) => {
-    await cartApi.updateItem(itemId, { quantity });
-    await fetchCart();
+    if (quantity <= 0) {
+      await removeItem(itemId);
+      return;
+    }
+    dispatch({ type: 'UPDATE_ITEM_QTY', payload: { itemId, quantity } });
+    try {
+      await cartApi.updateItem(itemId, { quantity });
+      await fetchCart(true);
+    } catch {
+      await fetchCart(true);
+    }
   };
 
   const removeItem = async (itemId) => {
-    await cartApi.removeItem(itemId);
-    await fetchCart();
+    try {
+      await cartApi.removeItem(itemId);
+    } finally {
+      await fetchCart(true);
+    }
+  };
+
+  const deleteSelectedItems = async (itemIds = []) => {
+    try {
+      await cartApi.deleteItems(itemIds);
+    } finally {
+      await fetchCart(true);
+    }
   };
 
   const clearCart = async () => {
@@ -104,6 +143,7 @@ export function CartProvider({ children }) {
         addToCart,
         updateQuantity,
         removeItem,
+        deleteSelectedItems,
         clearCart,
         applyVoucher,
         removeVoucher,

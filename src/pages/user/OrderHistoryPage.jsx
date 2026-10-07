@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Package, ChevronDown, ChevronUp } from 'lucide-react';
 import { orderApi } from '../../api/orderApi';
+import { useToast } from '../../components/ui/Toast';
 import { Navbar } from '../../components/layout/Navbar';
 import { Footer } from '../../components/layout/Footer';
 import { PageSpinner } from '../../components/ui/Spinner';
@@ -15,12 +16,30 @@ export default function OrderHistoryPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null);
+  const [cancellingId, setCancellingId] = useState(null);
+  const toast = useToast();
 
   useEffect(() => {
     orderApi.getMyOrders().then((data) => {
       setOrders(data.content || data || []);
     }).catch(() => setOrders([])).finally(() => setLoading(false));
   }, []);
+
+  const handleCancelOrder = async (orderId) => {
+    if (!confirm('Bạn có chắc chắn muốn hủy đơn hàng này không?')) return;
+    setCancellingId(orderId);
+    try {
+      await orderApi.cancelOrder(orderId);
+      setOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? { ...o, status: 'CANCELLED' } : o))
+      );
+      toast.success('Hủy đơn hàng thành công');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Không thể hủy đơn hàng');
+    } finally {
+      setCancellingId(null);
+    }
+  };
 
   if (loading) return <><Navbar /><PageSpinner /></>;
 
@@ -123,6 +142,24 @@ export default function OrderHistoryPage() {
                             <span className="total-amount">{formatCurrency(order.finalAmount)}</span>
                           </div>
                         </div>
+
+                        {/* Customer Cancel Order Action */}
+                        {(order.status === 'PENDING' || order.status === 'CONFIRMED') && (
+                          <div className="order-actions" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+                            <button
+                              type="button"
+                              className="btn btn-outline btn-sm"
+                              style={{ color: 'var(--error)', borderColor: 'var(--error)', cursor: 'pointer', padding: '6px 16px', borderRadius: '6px' }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCancelOrder(order.id);
+                              }}
+                              disabled={cancellingId === order.id}
+                            >
+                              {cancellingId === order.id ? 'Đang hủy đơn...' : 'Hủy đơn hàng'}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

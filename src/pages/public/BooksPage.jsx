@@ -175,10 +175,11 @@ export default function BooksPage() {
                       className="form-input"
                       value={filters.categoryId}
                       onChange={(e) => setFilters((f) => ({ ...f, categoryId: e.target.value }))}
+                      title={categories.find((c) => String(c.id) === String(filters.categoryId))?.name || 'Tất cả danh mục'}
                     >
                       <option value="">Tất cả danh mục</option>
                       {categories.map((cat) => (
-                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        <option key={cat.id} value={cat.id} title={cat.name}>{cat.name}</option>
                       ))}
                     </select>
                   </div>

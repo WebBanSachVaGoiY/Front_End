@@ -14,7 +14,7 @@
 - [x] **Cart Module:** Chuẩn hóa adapter `normalizeCartData` trong `cartApi.js` ánh xạ `CartDTO` / `CartItemDTO` từ Spring Boot sang format UI React; bổ sung hàm xóa nhiều `deleteItems`; giải quyết triệt để xung đột Git.
 - [x] **Quản lý danh mục (Categories):** Xây dựng trang Admin quản lý danh mục (`ManageCategoriesPage.jsx`), tích hợp API CRUD danh mục với Backend, đăng ký route và gắn Sidebar Admin.
 - [x] **Độ tin cậy & Fallback Runtime:** Bổ sung hàm `saveOrders` (`orderApi.js`) và `saveUsers` (`authApi.js`), loại bỏ nguy cơ `ReferenceError` khi chạy offline / localStorage fallback. Dọn dẹp toàn bộ import dư thừa.
-- [ ] **Admin & User UI Actions (Đang thực hiện):** Bổ sung các nút bấm, modal tương tác cho các API Backend đã hoàn thiện (Hủy đơn, Toggle Featured, Modal Order Detail, Modal Edit User, Xóa nhiều giỏ hàng).
+- [x] **Admin & User UI Actions (Đã hoàn thành):** Bổ sung các nút bấm, modal tương tác cho các API Backend đã hoàn thiện (Hủy đơn, Toggle Featured ⭐, Modal Order Detail, Modal Edit User, Xóa nhiều giỏ hàng).
 - [ ] **Modules chờ Backend:** Review, Voucher, Thống kê Dashboard, RecSys (hiện chạy mock fallback).
 
 ---
@@ -27,24 +27,24 @@ Các API này Backend đã xây dựng hoàn thiện và kiểm thử thành cô
 - **File:** `src/pages/user/OrderHistoryPage.jsx`
 - **API đã có:** `orderApi.cancelOrder(orderId)` ➔ `PUT /api/v1/orders/{id}/cancel`
 - **Mô tả công việc:**
-  - [ ] Hiển thị nút **"Hủy đơn hàng"** khi đơn ở trạng thái `PENDING` (Chờ xử lý) hoặc `CONFIRMED` (Đã xác nhận).
-  - [ ] Thêm popup/modal xác nhận trước khi hủy: *"Bạn có chắc chắn muốn hủy đơn hàng này không?"*.
-  - [ ] Gọi `orderApi.cancelOrder(order.id)`, cập nhật trạng thái đơn thành `CANCELLED` trên UI và hiển thị Toast thông báo.
+  - [x] Hiển thị nút **"Hủy đơn hàng"** khi đơn ở trạng thái `PENDING` (Chờ xử lý) hoặc `CONFIRMED` (Đã xác nhận).
+  - [x] Thêm popup/modal xác nhận trước khi hủy: *"Bạn có chắc chắn muốn hủy đơn hàng này không?"*.
+  - [x] Gọi `orderApi.cancelOrder(order.id)`, cập nhật trạng thái đơn thành `CANCELLED` trên UI và hiển thị Toast thông báo.
 
 ### 1.2. Bổ sung nút Toggle Featured ⭐ trên bảng Quản lý sách
 - **File:** `src/pages/admin/ManageBooksPage.jsx`
 - **API đã có:** `bookApi.toggleFeatured(bookId)` ➔ `PATCH /api/v1/admin/books/{id}/featured`
 - **Mô tả công việc:**
-  - [ ] Thêm icon/nút ngôi sao ⭐ (hoặc nút gạt Switch) tại mỗi dòng của bảng danh sách sách.
-  - [ ] Ngôi sao sáng vàng (`fill="var(--accent)"`) khi `book.isFeatured === true`, màu xám mờ khi `false`.
-  - [ ] Khi click, gọi `bookApi.toggleFeatured(book.id)` và cập nhật tức thì state `books`, toast thông báo thành công.
+  - [x] Thêm icon/nút ngôi sao ⭐ (hoặc nút gạt Switch) tại mỗi dòng của bảng danh sách sách.
+  - [x] Ngôi sao sáng vàng (`fill="var(--accent)"`) khi `book.isFeatured === true`, màu xám mờ khi `false`.
+  - [x] Khi click, gọi `bookApi.toggleFeatured(book.id)` và cập nhật tức thì state `books`, toast thông báo thành công.
 
 ### 1.3. Bổ sung Modal "Xem chi tiết đơn hàng" cho Admin
 - **File:** `src/pages/admin/ManageOrdersPage.jsx`
 - **API đã có:** `orderApi.getOrder(orderId)` ➔ `GET /api/v1/orders/{id}` (Backend cho phép Admin xem mọi đơn)
 - **Mô tả công việc:**
-  - [ ] Thêm nút icon Xem chi tiết (`<Eye size={16} />`) ở cột Thao tác tại mỗi dòng đơn hàng.
-  - [ ] Tạo Modal hiển thị chi tiết đơn hàng:
+  - [x] Thêm nút icon Xem chi tiết (`<Eye size={16} />`) ở cột Thao tác tại mỗi dòng đơn hàng.
+  - [x] Tạo Modal hiển thị chi tiết đơn hàng:
     - Danh sách các cuốn sách đã mua (Ảnh bìa, Tên sách, Tác giả, Đơn giá, Số lượng, Thành tiền).
     - Thông tin người nhận: Họ tên, Số điện thoại, Địa chỉ giao hàng, Ghi chú.
     - Phương thức thanh toán (`COD` / `VNPAY`), Trạng thái thanh toán (`PAID` / `PENDING`).
@@ -54,20 +54,20 @@ Các API này Backend đã xây dựng hoàn thiện và kiểm thử thành cô
 - **File:** `src/pages/admin/ManageUsersPage.jsx`
 - **API đã có:** `adminApi.updateUser(userId, data)` ➔ `PUT /api/v1/admin/users/{id}`
 - **Mô tả công việc:**
-  - [ ] Thêm nút icon Sửa (`<Pencil size={14} />`) bên cạnh nút Khóa/Mở khóa.
-  - [ ] Tạo Modal chỉnh sửa người dùng:
+  - [x] Thêm nút icon Sửa (`<Pencil size={14} />`) bên cạnh nút Khóa/Mở khóa.
+  - [x] Tạo Modal chỉnh sửa người dùng:
     - Chỉnh sửa thông tin cá nhân: `fullName`, `phone`, `address`.
     - Phân quyền tài khoản (Dropdown chọn `ROLE_CUSTOMER` hoặc `ROLE_ADMIN`).
     - Trạng thái hoạt động `enabled` (Switch Bật/Tắt).
-  - [ ] Gọi `adminApi.updateUser(user.id, payload)` và cập nhật lại danh sách `users`.
+  - [x] Gọi `adminApi.updateUser(user.id, payload)` và cập nhật lại danh sách `users`.
 
 ### 1.5. Bổ sung chức năng Checkbox chọn nhiều & Xóa hàng loạt giỏ hàng
 - **File:** `src/pages/user/CartPage.jsx`
 - **API đã có:** `cartApi.deleteItems(bookIds)` ➔ `DELETE /api/v1/cart/items` (body: `List<Long>`)
 - **Mô tả công việc:**
-  - [ ] Thêm checkbox chọn từng item và checkbox "Chọn tất cả" ở đầu bảng giỏ hàng.
-  - [ ] Hiển thị thanh thao tác hàng loạt: *"Đã chọn X sản phẩm"* kèm nút *"Xóa các mục đã chọn"*.
-  - [ ] Gọi `cartApi.deleteItems(selectedIds)` và refresh lại giỏ hàng.
+  - [x] Thêm checkbox chọn từng item và checkbox "Chọn tất cả" ở đầu bảng giỏ hàng.
+  - [x] Hiển thị thanh thao tác hàng loạt: *"Đã chọn X sản phẩm"* kèm nút *"Xóa các mục đã chọn"*.
+  - [x] Gọi `cartApi.deleteItems(selectedIds)` và refresh lại giỏ hàng.
 
 ---
 

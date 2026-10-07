@@ -17,7 +17,7 @@ import './CartPage.css';
 export default function CartPage() {
   const {
     items, subtotal, discount, shippingFee, voucher,
-    updateQuantity, removeItem, clearCart, applyVoucher, removeVoucher, getFinalAmount,
+    updateQuantity, removeItem, deleteSelectedItems, clearCart, applyVoucher, removeVoucher, getFinalAmount,
     isLoading,
   } = useCart();
   const toast = useToast();
@@ -28,6 +28,40 @@ export default function CartPage() {
   const [showVouchers, setShowVouchers] = useState(false);
   const [availableVouchers, setAvailableVouchers] = useState([]);
   const [removingId, setRemovingId] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
+
+  const allItemIds = items.map((it) => it.book?.id || it.id);
+  const isAllSelected = items.length > 0 && selectedIds.length === items.length;
+
+  const handleToggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(allItemIds);
+    }
+  };
+
+  const handleToggleSelectItem = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Xóa ${selectedIds.length} sản phẩm đã chọn khỏi giỏ hàng?`)) return;
+    setIsDeletingBulk(true);
+    try {
+      await deleteSelectedItems(selectedIds);
+      setSelectedIds([]);
+      toast.success('Đã xóa các sản phẩm đã chọn');
+    } catch {
+      toast.error('Không thể xóa sản phẩm đã chọn');
+    } finally {
+      setIsDeletingBulk(false);
+    }
+  };
 
   const handleQuantityChange = async (item, delta) => {
     const newQty = item.quantity + delta;
@@ -91,7 +125,18 @@ export default function CartPage() {
     setShowVouchers(false);
   };
 
-  if (isLoading) return <><Navbar /><div className="page-wrapper"><div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}><Spinner size="lg" /></div></div></>;
+  if (isLoading && items.length === 0) {
+    return (
+      <>
+        <Navbar />
+        <div className="page-wrapper">
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}>
+            <Spinner size="lg" />
+          </div>
+        </div>
+      </>
+    );
+  }
 
   if (items.length === 0) {
     return (
@@ -132,10 +177,51 @@ export default function CartPage() {
             <div className="cart-layout">
               {/* Cart Items */}
               <div className="cart-items animate-fadeInUp">
+                {/* Bulk Select Bar */}
+                <div className="cart-select-bar card">
+                  <label className="cart-select-all-label">
+                    <input
+                      type="checkbox"
+                      checked={isAllSelected}
+                      onChange={handleToggleSelectAll}
+                      className="cart-checkbox"
+                    />
+                    <span>Chọn tất cả ({items.length} sản phẩm)</span>
+                  </label>
+                  {selectedIds.length > 0 && (
+                    <button
+                      className="delete-selected-btn"
+                      onClick={handleDeleteSelected}
+                      disabled={isDeletingBulk}
+                    >
+                      {isDeletingBulk ? (
+                        <Spinner size="sm" />
+                      ) : (
+                        <>
+                          <Trash2 size={14} />
+                          <span>Xóa đã chọn ({selectedIds.length})</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+
                 {items.map((item) => {
+                  const itemId = item.book?.id || item.id;
                   const price = item.book?.discountPrice || item.book?.price || 0;
+                  const isChecked = selectedIds.includes(itemId);
+
                   return (
-                    <div key={item.id} className="cart-item card">
+                    <div key={item.id} className={`cart-item card ${isChecked ? 'selected' : ''}`}>
+                      <div className="cart-item-checkbox-wrapper">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => handleToggleSelectItem(itemId)}
+                          className="cart-checkbox"
+                        />
+                      </div>
+
                       <Link to={`/books/${item.book?.id}`} className="cart-item-image">
                         <img
                           src={item.book?.coverImageUrl || DEFAULT_BOOK_COVER}

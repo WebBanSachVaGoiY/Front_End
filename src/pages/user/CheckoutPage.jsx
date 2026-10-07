@@ -25,6 +25,7 @@ export default function CheckoutPage() {
     shippingAddress: user?.address || '',
     note: '',
   });
+  const [paymentMethod, setPaymentMethod] = useState('COD');
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(null);
@@ -53,7 +54,7 @@ export default function CheckoutPage() {
         recipientPhone: form.recipientPhone,
         shippingAddress: form.shippingAddress,
         note: form.note,
-        paymentMethod: 'COD',
+        paymentMethod: paymentMethod,
         items: items.map((it) => ({
           bookId: it.book?.id || it.id,
           quantity: it.quantity,
@@ -68,6 +69,23 @@ export default function CheckoutPage() {
       setLoading(false);
     }
   };
+
+  if (items.length === 0 && !success) {
+    return (
+      <>
+        <Navbar />
+        <div className="page-wrapper">
+          <div className="container" style={{ textAlign: 'center', padding: '4rem 1rem' }}>
+            <h2>Giỏ hàng của bạn đang trống</h2>
+            <p style={{ color: 'var(--text-muted)', margin: '1rem 0 2rem' }}>Vui lòng chọn sản phẩm trước khi thanh toán.</p>
+            <Button variant="primary" onClick={() => navigate('/books')}>
+              Khám phá sách ngay
+            </Button>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   // Success screen
   if (success) {
@@ -161,11 +179,27 @@ export default function CheckoutPage() {
                 {/* Payment method */}
                 <div className="checkout-section card">
                   <h3><FileText size={18} /> Phương thức thanh toán</h3>
-                  <div className="payment-option active">
+                  <div
+                    className={`payment-option ${paymentMethod === 'COD' ? 'active' : ''}`}
+                    onClick={() => setPaymentMethod('COD')}
+                    style={{ cursor: 'pointer' }}
+                  >
                     <div className="payment-radio" />
                     <div>
                       <div className="payment-name">Thanh toán khi nhận hàng (COD)</div>
-                      <div className="payment-desc">Thanh toán bằng tiền mặt khi nhận hàng</div>
+                      <div className="payment-desc">Thanh toán bằng tiền mặt khi shipper giao hàng tới</div>
+                    </div>
+                  </div>
+
+                  <div
+                    className={`payment-option ${paymentMethod === 'VNPAY' ? 'active' : ''}`}
+                    onClick={() => setPaymentMethod('VNPAY')}
+                    style={{ cursor: 'pointer', marginTop: '10px' }}
+                  >
+                    <div className="payment-radio" />
+                    <div>
+                      <div className="payment-name">Thanh toán online (VNPAY / Thẻ ATM / QR)</div>
+                      <div className="payment-desc">Hỗ trợ quét mã VNPAY-QR, thẻ ATM nội địa & thẻ quốc tế</div>
                     </div>
                   </div>
                 </div>

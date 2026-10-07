@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ShoppingCart, Zap, Minus, Plus,
-  BookOpen, Building, Calendar, Hash, Globe,
+  BookOpen, Building, Calendar, Hash, Globe, Trash2,
 } from 'lucide-react';
 import { bookApi } from '../../api/bookApi';
 import { reviewApi } from '../../api/reviewApi';
@@ -25,7 +25,7 @@ export default function BookDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const toast = useToast();
 
   const [book, setBook] = useState(null);
@@ -39,6 +39,7 @@ export default function BookDetailPage() {
   const [myRating, setMyRating] = useState(5);
   const [myComment, setMyComment] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [canReviewState, setCanReviewState] = useState(null);
 
   useEffect(() => {
     const fetch = async () => {
@@ -58,6 +59,12 @@ export default function BookDetailPage() {
           }).catch(() => ({ content: [] }));
           setRelated((relatedData.content || []).filter((b) => b.id !== bookData.id));
         }
+
+        if (isAuthenticated) {
+          reviewApi.canUserReview(id)
+            .then(setCanReviewState)
+            .catch(() => setCanReviewState({ canReview: true }));
+        }
       } catch {
         toast.error('Không tìm thấy sách');
         navigate('/books');
@@ -67,7 +74,7 @@ export default function BookDetailPage() {
     };
     fetch();
     window.scrollTo(0, 0);
-  }, [id]);
+  }, [id, isAuthenticated]);
 
   const changeQty = (delta) => {
     setQuantity((q) => {
@@ -100,11 +107,19 @@ export default function BookDetailPage() {
 
   const handleBuyNow = async () => {
     if (!isAuthenticated) {
+      toast.warning('Vui lòng đăng nhập để mua hàng');
       navigate('/login');
       return;
     }
-    await handleAddToCart();
-    navigate('/cart');
+    setAdding(true);
+    try {
+      await addToCart(book.id, quantity);
+      navigate('/checkout');
+    } catch {
+      toast.error('Không thể xử lý yêu cầu mua ngay');
+    } finally {
+      setAdding(false);
+    }
   };
 
   const handleSubmitReview = async (e) => {
@@ -122,11 +137,26 @@ export default function BookDetailPage() {
       });
       setReviews((prev) => [newReview, ...prev]);
       setMyComment('');
+      setCanReviewState((prev) => ({ ...prev, canReview: false, alreadyReviewed: true }));
       toast.success('Cảm ơn đánh giá của bạn!');
+      bookApi.getBook(book.id).then(setBook).catch(() => {});
     } catch (err) {
       toast.error(err.response?.data?.message || 'Không thể gửi đánh giá');
     } finally {
       setSubmittingReview(false);
+    }
+  };
+
+  const handleDeleteReview = async (reviewId) => {
+    if (!confirm('Bạn có chắc muốn xóa đánh giá này không?')) return;
+    try {
+      await reviewApi.deleteReview(reviewId);
+      setReviews((prev) => prev.filter((r) => r.id !== reviewId));
+      toast.success('Đã xóa đánh giá thành công');
+      reviewApi.canUserReview(book.id).then(setCanReviewState).catch(() => {});
+      bookApi.getBook(book.id).then(setBook).catch(() => {});
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Không thể xóa đánh giá');
     }
   };
 
@@ -323,36 +353,50 @@ export default function BookDetailPage() {
               {isAuthenticated && (
                 <div className="write-review card">
                   <h4>Viết đánh giá</h4>
-                  <form onSubmit={handleSubmitReview}>
-                    <div className="review-rating">
-                      <label className="form-label">Chấm điểm</label>
-                      <StarRating
-                        rating={myRating}
-                        interactive
-                        size={28}
-                        onChange={setMyRating}
-                      />
+                  {canReviewState && !canReviewState.canReview ? (
+                    <div style={{
+                      padding: '12px 16px',
+                      background: 'rgba(37, 99, 235, 0.08)',
+                      border: '1px solid rgba(37, 99, 235, 0.2)',
+                      borderRadius: '8px',
+                      color: 'var(--text-secondary)',
+                      fontSize: '0.875rem',
+                      marginTop: '8px',
+                    }}>
+                      💡 {canReviewState.reason || (canReviewState.alreadyReviewed ? 'Bạn đã đánh giá cuốn sách này rồi.' : 'Chỉ những khách hàng đã mua và nhận sách thành công mới có thể gửi đánh giá.')}
                     </div>
-                    <div className="form-group" style={{ marginTop: '1rem' }}>
-                      <label className="form-label">Nhận xét của bạn</label>
-                      <textarea
-                        className="form-input form-textarea"
-                        placeholder="Chia sẻ cảm nhận về cuốn sách..."
-                        value={myComment}
-                        onChange={(e) => setMyComment(e.target.value)}
-                        rows={4}
-                        required
-                      />
-                    </div>
-                    <Button
-                      type="submit"
-                      variant="primary"
-                      loading={submittingReview}
-                      style={{ marginTop: '1rem' }}
-                    >
-                      Gửi đánh giá
-                    </Button>
-                  </form>
+                  ) : (
+                    <form onSubmit={handleSubmitReview}>
+                      <div className="review-rating">
+                        <label className="form-label">Chấm điểm</label>
+                        <StarRating
+                          rating={myRating}
+                          interactive
+                          size={28}
+                          onChange={setMyRating}
+                        />
+                      </div>
+                      <div className="form-group" style={{ marginTop: '1rem' }}>
+                        <label className="form-label">Nhận xét của bạn</label>
+                        <textarea
+                          className="form-input form-textarea"
+                          placeholder="Chia sẻ cảm nhận về cuốn sách..."
+                          value={myComment}
+                          onChange={(e) => setMyComment(e.target.value)}
+                          rows={4}
+                          required
+                        />
+                      </div>
+                      <Button
+                        type="submit"
+                        variant="primary"
+                        loading={submittingReview}
+                        style={{ marginTop: '1rem' }}
+                      >
+                        Gửi đánh giá
+                      </Button>
+                    </form>
+                  )}
                 </div>
               )}
 
@@ -363,27 +407,53 @@ export default function BookDetailPage() {
                 </div>
               ) : (
                 <div className="reviews-list">
-                  {reviews.map((review) => (
-                    <div key={review.id} className="review-card card">
-                      <div className="review-header">
-                        <div className="reviewer-avatar">
-                          {review.user?.fullName?.[0] || review.user?.username?.[0] || 'U'}
-                        </div>
-                        <div>
-                          <div className="reviewer-name">
-                            {review.user?.fullName || review.user?.username}
+                  {reviews.map((review) => {
+                    const isOwnerOrAdmin = user && (user.id === review.user?.id || user.role === 'ROLE_ADMIN');
+                    return (
+                      <div key={review.id} className="review-card card">
+                        <div className="review-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div className="reviewer-avatar">
+                              {review.user?.fullName?.[0] || review.user?.username?.[0] || 'U'}
+                            </div>
+                            <div>
+                              <div className="reviewer-name">
+                                {review.user?.fullName || review.user?.username}
+                              </div>
+                              <div className="review-meta">
+                                <StarRating rating={review.rating} size={12} />
+                                <span className="review-time">{timeAgo(review.createdAt)}</span>
+                              </div>
+                            </div>
                           </div>
-                          <div className="review-meta">
-                            <StarRating rating={review.rating} size={12} />
-                            <span className="review-time">{timeAgo(review.createdAt)}</span>
-                          </div>
+
+                          {isOwnerOrAdmin && (
+                            <button
+                              type="button"
+                              className="btn-icon-sm danger"
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: 'var(--error)',
+                                cursor: 'pointer',
+                                padding: '4px 6px',
+                                borderRadius: '4px',
+                                opacity: 0.7,
+                                transition: 'opacity 0.2s',
+                              }}
+                              onClick={() => handleDeleteReview(review.id)}
+                              title="Xóa đánh giá"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          )}
                         </div>
+                        {review.comment && (
+                          <p className="review-comment" style={{ marginTop: '8px' }}>{review.comment}</p>
+                        )}
                       </div>
-                      {review.comment && (
-                        <p className="review-comment">{review.comment}</p>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

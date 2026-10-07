@@ -36,18 +36,28 @@ const MOCK_STATS = {
 
 export default function DashboardPage() {
   const [stats, setStats] = useState(MOCK_STATS);
+  const [revenueData, setRevenueData] = useState(MOCK_REVENUE);
+  const [bestSellers, setBestSellers] = useState(MOCK_BESTSELLERS);
   const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetch = async () => {
       try {
-        const [statsData, ordersData] = await Promise.all([
+        const [statsData, ordersData, revenueChart, bestSellersData] = await Promise.all([
           adminApi.getStats().catch(() => MOCK_STATS),
-          orderApi.getAllOrders({ size: 5, sort: 'newest' }).catch(() => ({ content: [] })),
+          orderApi.getAllOrders({ size: 5 }).catch(() => ({ content: [] })),
+          adminApi.getRevenueChart().catch(() => MOCK_REVENUE),
+          adminApi.getBestSellers().catch(() => MOCK_BESTSELLERS),
         ]);
         setStats(statsData || MOCK_STATS);
-        setRecentOrders(ordersData.content || []);
+        setRecentOrders(ordersData.content || ordersData || []);
+        if (Array.isArray(revenueChart) && revenueChart.length > 0) {
+          setRevenueData(revenueChart);
+        }
+        if (Array.isArray(bestSellersData) && bestSellersData.length > 0) {
+          setBestSellers(bestSellersData);
+        }
       } finally {
         setLoading(false);
       }
@@ -120,7 +130,7 @@ export default function DashboardPage() {
         <div className="chart-card card animate-fadeInUp">
           <h3 className="chart-title">Doanh thu theo tháng</h3>
           <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={MOCK_REVENUE}>
+            <LineChart data={revenueData}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(139,92,246,0.1)" />
               <XAxis dataKey="month" tick={{ fill: '#7C6FA0', fontSize: 12 }} />
               <YAxis
@@ -148,7 +158,7 @@ export default function DashboardPage() {
         <div className="chart-card card animate-fadeInUp">
           <h3 className="chart-title">Sách bán chạy</h3>
           <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={MOCK_BESTSELLERS} layout="vertical">
+            <BarChart data={bestSellers} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(139,92,246,0.1)" horizontal={false} />
               <XAxis type="number" tick={{ fill: '#7C6FA0', fontSize: 11 }} />
               <YAxis

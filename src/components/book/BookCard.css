@@ -141,10 +141,13 @@
   font-size: 0.75rem;
   color: var(--text-secondary);
   margin-top: var(--space-1);
+  line-height: 1;
 }
 
 .book-card-rating .star-icon {
   color: var(--accent);
+  display: inline-block;
+  flex-shrink: 0;
 }
 
 .separator {
