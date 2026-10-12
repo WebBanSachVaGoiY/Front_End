@@ -15,7 +15,9 @@
 - [x] **Quản lý danh mục (Categories):** Xây dựng trang Admin quản lý danh mục (`ManageCategoriesPage.jsx`), tích hợp API CRUD danh mục với Backend, đăng ký route và gắn Sidebar Admin.
 - [x] **Độ tin cậy & Fallback Runtime:** Bổ sung hàm `saveOrders` (`orderApi.js`) và `saveUsers` (`authApi.js`), loại bỏ nguy cơ `ReferenceError` khi chạy offline / localStorage fallback. Dọn dẹp toàn bộ import dư thừa.
 - [x] **Admin & User UI Actions (Đã hoàn thành):** Bổ sung các nút bấm, modal tương tác cho các API Backend đã hoàn thiện (Hủy đơn, Toggle Featured ⭐, Modal Order Detail, Modal Edit User, Xóa nhiều giỏ hàng).
-- [ ] **Modules chờ Backend:** Review, Voucher, Thống kê Dashboard, RecSys (hiện chạy mock fallback).
+- [x] **Review & Đánh giá Sách (Đã hoàn thành):** Tích hợp `reviewApi.js` và `BookDetailPage.jsx` kết nối trực tiếp API Backend (`can-review`, danh sách review, tạo đánh giá).
+- [x] **Thống kê Dashboard Admin (Đã hoàn thành):** Tích hợp `adminApi.js` và `DashboardPage.jsx`, loại bỏ 100% mock data, kết nối API thống kê thật (doanh thu, đơn hàng, người dùng, top sách bán chạy).
+- [ ] **Modules tiếp theo:** Voucher (Mã giảm giá), RecSys Serving (Gợi ý thông minh).
 
 ---
 
@@ -95,12 +97,12 @@ Các API này Backend đã xây dựng hoàn thiện và kiểm thử thành cô
 
 Hiện tại các module này phía Frontend đã có sẵn giao diện rất đẹp và code API service đầy đủ, đang chạy qua cơ chế `mock fallback / localStorage`. Khi Backend triển khai xong Controller, chỉ cần kiểm tra lại kết nối:
 
-| Module | File API FE | File UI FE | Trạng thái Backend cần |
+| Module | File API FE | File UI FE | Trạng thái tích hợp |
 |:---|:---|:---|:---|
-| **1. Đánh giá & Bình luận (Reviews)** | `src/api/reviewApi.js` | `src/pages/public/BookDetailPage.jsx` | Chờ BE viết `ReviewService` và `ReviewController` (`GET/POST /books/{id}/reviews`, `PUT/DELETE /reviews/{id}`). |
-| **2. Thống kê Dashboard Admin** | `src/api/adminApi.js` | `src/pages/admin/DashboardPage.jsx` | Chờ BE viết `AdminStatsController` (`/admin/stats`, `/admin/stats/revenue`, `/admin/stats/best-sellers`). |
-| **3. Mã giảm giá (Vouchers)** | `src/api/voucherApi.js` | `src/pages/user/CartPage.jsx`<br>`src/pages/user/CheckoutPage.jsx` | Chờ BE thiết kế Entity `Voucher` và Controller xác thực mã giảm giá. |
-| **4. Gợi ý thông minh (RecSys)** | `src/api/bookApi.js` (`getRecommendations`) | `src/pages/public/HomePage.jsx` | Chờ BE viết Controller expose danh sách sách gợi ý từ bảng `user_recommendations`. |
+| **1. Đánh giá & Bình luận (Reviews)** | `src/api/reviewApi.js` | `src/pages/public/BookDetailPage.jsx` | ✅ **ĐÃ TÍCH HỢP API THẬT:** Đã kết nối đầy đủ các endpoint `/books/{id}/can-review`, `/books/{id}/reviews`. |
+| **2. Thống kê Dashboard Admin** | `src/api/adminApi.js` | `src/pages/admin/DashboardPage.jsx` | ✅ **ĐÃ TÍCH HỢP API THẬT:** Đã loại bỏ 100% mock data, kết nối `/admin/stats`, `/revenue`, `/best-sellers`. |
+| **3. Mã giảm giá (Vouchers)** | `src/api/voucherApi.js` | `src/pages/user/CartPage.jsx`<br>`src/pages/user/CheckoutPage.jsx` | ⏳ Chờ BE thiết kế Entity `Voucher` và Controller xác thực mã giảm giá. |
+| **4. Gợi ý thông minh (RecSys)** | `src/api/bookApi.js` (`getRecommendations`) | `src/pages/public/HomePage.jsx` | ⏳ Chờ BE viết Controller expose danh sách sách gợi ý từ bảng `user_recommendations`. |
 
 ---
 

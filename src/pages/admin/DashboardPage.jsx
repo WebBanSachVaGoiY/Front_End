@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { TrendingUp, Package, Users, BookOpen, ArrowUp } from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { TrendingUp, Package, Users, BookOpen, Activity, AlertCircle, RefreshCw } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar,
@@ -12,58 +12,54 @@ import { formatDateTime } from '../../utils/formatDate';
 import { PageSpinner } from '../../components/ui/Spinner';
 import './AdminDashboard.css';
 
-// Mock data for demo (will be replaced by real API)
-const MOCK_REVENUE = [
-  { month: 'T1', revenue: 12000000 }, { month: 'T2', revenue: 19000000 },
-  { month: 'T3', revenue: 15000000 }, { month: 'T4', revenue: 25000000 },
-  { month: 'T5', revenue: 22000000 }, { month: 'T6', revenue: 30000000 },
-  { month: 'T7', revenue: 28000000 }, { month: 'T8', revenue: 35000000 },
-  { month: 'T9', revenue: 32000000 },
-];
-
-const MOCK_BESTSELLERS = [
-  { title: 'Đắc Nhân Tâm', sold: 145 }, { title: 'Nhà Giả Kim', sold: 132 },
-  { title: 'Tư Duy Phản Biện', sold: 98 }, { title: 'Sapiens', sold: 87 },
-  { title: 'Atomic Habits', sold: 76 },
-];
-
-const MOCK_STATS = {
-  totalRevenue: 218000000,
-  totalOrders: 1247,
-  totalUsers: 5382,
-  totalBooks: 843,
-};
-
 export default function DashboardPage() {
-  const [stats, setStats] = useState(MOCK_STATS);
-  const [revenueData, setRevenueData] = useState(MOCK_REVENUE);
-  const [bestSellers, setBestSellers] = useState(MOCK_BESTSELLERS);
+  const [stats, setStats] = useState({
+    totalRevenue: 0,
+    totalOrders: 0,
+    totalUsers: 0,
+    totalBooks: 0,
+  });
+  const [revenueData, setRevenueData] = useState([]);
+  const [bestSellers, setBestSellers] = useState([]);
   const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchDashboardData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [statsData, ordersData, revenueChart, bestSellersData] = await Promise.all([
+        adminApi.getStats(),
+        orderApi.getAllOrders({ size: 5 }),
+        adminApi.getRevenueChart(),
+        adminApi.getBestSellers(5),
+      ]);
+
+      if (statsData) {
+        setStats({
+          totalRevenue: Number(statsData.totalRevenue) || 0,
+          totalOrders: Number(statsData.totalOrders) || 0,
+          totalUsers: Number(statsData.totalUsers) || 0,
+          totalBooks: Number(statsData.totalBooks) || 0,
+        });
+      }
+
+      setRecentOrders(ordersData?.content || (Array.isArray(ordersData) ? ordersData : []));
+      setRevenueData(Array.isArray(revenueChart) ? revenueChart : []);
+      setBestSellers(Array.isArray(bestSellersData) ? bestSellersData : []);
+    } catch (err) {
+      console.error('Lỗi khi tải dữ liệu Admin Dashboard:', err);
+      const msg = err.response?.data?.message || err.message || 'Không thể tải số liệu thống kê từ máy chủ.';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetch = async () => {
-      try {
-        const [statsData, ordersData, revenueChart, bestSellersData] = await Promise.all([
-          adminApi.getStats().catch(() => MOCK_STATS),
-          orderApi.getAllOrders({ size: 5 }).catch(() => ({ content: [] })),
-          adminApi.getRevenueChart().catch(() => MOCK_REVENUE),
-          adminApi.getBestSellers().catch(() => MOCK_BESTSELLERS),
-        ]);
-        setStats(statsData || MOCK_STATS);
-        setRecentOrders(ordersData.content || ordersData || []);
-        if (Array.isArray(revenueChart) && revenueChart.length > 0) {
-          setRevenueData(revenueChart);
-        }
-        if (Array.isArray(bestSellersData) && bestSellersData.length > 0) {
-          setBestSellers(bestSellersData);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetch();
-  }, []);
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   const STAT_CARDS = [
     {
@@ -71,28 +67,28 @@ export default function DashboardPage() {
       value: formatCurrency(stats.totalRevenue),
       icon: <TrendingUp size={24} />,
       color: '#6C3DD3',
-      change: '+12.5%',
+      subtitle: 'Đơn giao thành công',
     },
     {
       label: 'Tổng đơn hàng',
       value: formatNumber(stats.totalOrders),
       icon: <Package size={24} />,
       color: '#3B82F6',
-      change: '+8.3%',
+      subtitle: 'Toàn hệ thống',
     },
     {
       label: 'Người dùng',
       value: formatNumber(stats.totalUsers),
       icon: <Users size={24} />,
       color: '#10B981',
-      change: '+5.1%',
+      subtitle: 'Tài khoản đăng ký',
     },
     {
       label: 'Đầu sách',
       value: formatNumber(stats.totalBooks),
       icon: <BookOpen size={24} />,
       color: '#F59E0B',
-      change: '+2.8%',
+      subtitle: 'Đang mở bán',
     },
   ];
 
@@ -100,10 +96,44 @@ export default function DashboardPage() {
 
   return (
     <div className="admin-page">
-      <div className="admin-page-header">
-        <h1>Dashboard</h1>
-        <p>Tổng quan hệ thống BookRunner</p>
+      <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h1>Dashboard</h1>
+          <p>Thống kê số liệu thực tế hệ thống BookRunner</p>
+        </div>
+        <button
+          className="btn btn-outline btn-sm"
+          onClick={fetchDashboardData}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+        >
+          <RefreshCw size={14} />
+          Làm mới
+        </button>
       </div>
+
+      {error && (
+        <div
+          className="card"
+          style={{
+            padding: '1rem 1.25rem',
+            marginBottom: '1.5rem',
+            borderLeft: '4px solid var(--error)',
+            background: 'rgba(239, 68, 68, 0.08)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '1rem',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--error)' }}>
+            <AlertCircle size={20} />
+            <span>{error}</span>
+          </div>
+          <button className="btn btn-outline btn-sm" onClick={fetchDashboardData}>
+            Thử lại
+          </button>
+        </div>
+      )}
 
       {/* Stat Cards */}
       <div className="stat-cards">
@@ -115,9 +145,9 @@ export default function DashboardPage() {
             <div className="stat-card-info">
               <div className="stat-card-label">{card.label}</div>
               <div className="stat-card-value">{card.value}</div>
-              <div className="stat-card-change">
-                <ArrowUp size={12} />
-                {card.change} so với tháng trước
+              <div className="stat-card-change" style={{ color: 'var(--text-muted)' }}>
+                <Activity size={12} />
+                {card.subtitle}
               </div>
             </div>
           </div>
@@ -128,64 +158,76 @@ export default function DashboardPage() {
       <div className="dashboard-charts">
         {/* Revenue chart */}
         <div className="chart-card card animate-fadeInUp">
-          <h3 className="chart-title">Doanh thu theo tháng</h3>
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={revenueData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(139,92,246,0.1)" />
-              <XAxis dataKey="month" tick={{ fill: '#7C6FA0', fontSize: 12 }} />
-              <YAxis
-                tick={{ fill: '#7C6FA0', fontSize: 11 }}
-                tickFormatter={(v) => `${v / 1000000}M`}
-              />
-              <Tooltip
-                formatter={(v) => [formatCurrency(v), 'Doanh thu']}
-                contentStyle={{
-                  background: '#1A1035', border: '1px solid rgba(139,92,246,0.3)',
-                  borderRadius: '10px', color: '#F8F4FF',
-                }}
-              />
-              <Line
-                type="monotone" dataKey="revenue"
-                stroke="#8B5CF6" strokeWidth={2.5}
-                dot={{ fill: '#8B5CF6', r: 4 }}
-                activeDot={{ r: 6, fill: '#F59E0B' }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          <h3 className="chart-title">Doanh thu 12 tháng</h3>
+          {revenueData.length === 0 ? (
+            <div style={{ height: 280, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+              Chưa có dữ liệu doanh thu
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart data={revenueData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(139,92,246,0.1)" />
+                <XAxis dataKey="month" tick={{ fill: '#7C6FA0', fontSize: 12 }} />
+                <YAxis
+                  tick={{ fill: '#7C6FA0', fontSize: 11 }}
+                  tickFormatter={(v) => `${(v / 1000000).toFixed(1)}M`}
+                />
+                <Tooltip
+                  formatter={(v) => [formatCurrency(v), 'Doanh thu']}
+                  contentStyle={{
+                    background: '#1A1035', border: '1px solid rgba(139,92,246,0.3)',
+                    borderRadius: '10px', color: '#F8F4FF',
+                  }}
+                />
+                <Line
+                  type="monotone" dataKey="revenue"
+                  stroke="#8B5CF6" strokeWidth={2.5}
+                  dot={{ fill: '#8B5CF6', r: 4 }}
+                  activeDot={{ r: 6, fill: '#F59E0B' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </div>
 
         {/* Best sellers chart */}
         <div className="chart-card card animate-fadeInUp">
-          <h3 className="chart-title">Sách bán chạy</h3>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={bestSellers} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(139,92,246,0.1)" horizontal={false} />
-              <XAxis type="number" tick={{ fill: '#7C6FA0', fontSize: 11 }} />
-              <YAxis
-                type="category" dataKey="title" width={130}
-                tick={{ fill: '#B4A8D0', fontSize: 11 }}
-              />
-              <Tooltip
-                formatter={(v) => [v, 'Đã bán']}
-                contentStyle={{
-                  background: '#1A1035', border: '1px solid rgba(139,92,246,0.3)',
-                  borderRadius: '10px', color: '#F8F4FF',
-                }}
-              />
-              <Bar dataKey="sold" fill="#6C3DD3" radius={[0, 4, 4, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <h3 className="chart-title">Top sách bán chạy nhất</h3>
+          {bestSellers.length === 0 ? (
+            <div style={{ height: 280, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+              Chưa có dữ liệu sách bán chạy
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={bestSellers} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(139,92,246,0.1)" horizontal={false} />
+                <XAxis type="number" tick={{ fill: '#7C6FA0', fontSize: 11 }} />
+                <YAxis
+                  type="category" dataKey="title" width={130}
+                  tick={{ fill: '#B4A8D0', fontSize: 11 }}
+                />
+                <Tooltip
+                  formatter={(v) => [v, 'Đã bán']}
+                  contentStyle={{
+                    background: '#1A1035', border: '1px solid rgba(139,92,246,0.3)',
+                    borderRadius: '10px', color: '#F8F4FF',
+                  }}
+                />
+                <Bar dataKey="sold" fill="#6C3DD3" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 
       {/* Recent Orders */}
       <div className="card animate-fadeInUp">
         <div className="table-header">
-          <h3>Đơn hàng gần đây</h3>
+          <h3>Đơn hàng mới nhất</h3>
         </div>
         {recentOrders.length === 0 ? (
           <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-            Chưa có đơn hàng
+            Chưa có đơn hàng nào trong hệ thống
           </p>
         ) : (
           <div className="data-table-wrapper">

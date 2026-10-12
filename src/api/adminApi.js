@@ -25,59 +25,22 @@ const isOfflineOrUnimplemented = (err) => {
 
 export const adminApi = {
   // ──────────────────────────────────────────────────────
-  // Dashboard stats — Backend chưa có Controller /admin/stats/**
-  // Các hàm dưới đây sẽ tự động dùng dữ liệu thật khi Backend triển khai,
-  // hiện tại fallback sang mock data.
+  // Dashboard stats — Khớp với AdminStatsController (Spring Boot)
+  // Endpoints: GET /admin/stats, GET /admin/stats/revenue, GET /admin/stats/best-sellers
   // ──────────────────────────────────────────────────────
   getStats: async () => {
-    try {
-      const response = await api.get('/admin/stats');
-      return response.data?.data || response.data;
-    } catch (err) {
-      if (!isOfflineOrUnimplemented(err)) throw err;
-      return {
-        totalRevenue: 285000000,
-        totalOrders: 1420,
-        totalUsers: 5630,
-        totalBooks: 9,
-      };
-    }
+    const response = await api.get('/admin/stats');
+    return response.data?.data || response.data;
   },
 
   getRevenueChart: async (params = {}) => {
-    try {
-      const response = await api.get('/admin/stats/revenue', { params });
-      return response.data?.data || response.data;
-    } catch (err) {
-      if (!isOfflineOrUnimplemented(err)) throw err;
-      return [
-        { month: 'T1', revenue: 14000000 },
-        { month: 'T2', revenue: 21000000 },
-        { month: 'T3', revenue: 18000000 },
-        { month: 'T4', revenue: 29000000 },
-        { month: 'T5', revenue: 26000000 },
-        { month: 'T6', revenue: 34000000 },
-        { month: 'T7', revenue: 32000000 },
-        { month: 'T8', revenue: 41000000 },
-        { month: 'T9', revenue: 38000000 },
-      ];
-    }
+    const response = await api.get('/admin/stats/revenue', { params });
+    return response.data?.data || response.data;
   },
 
   getBestSellers: async (limit = 10) => {
-    try {
-      const response = await api.get('/admin/stats/best-sellers', { params: { limit } });
-      return response.data?.data || response.data;
-    } catch (err) {
-      if (!isOfflineOrUnimplemented(err)) throw err;
-      return [
-        { title: 'Đắc Nhân Tâm', sold: 185 },
-        { title: 'Nhà Giả Kim', sold: 164 },
-        { title: 'Atomic Habits', sold: 142 },
-        { title: 'Sapiens: Lược Sử Loài Người', sold: 98 },
-        { title: 'Cây Cam Ngọt Của Tôi', sold: 86 },
-      ];
-    }
+    const response = await api.get('/admin/stats/best-sellers', { params: { limit } });
+    return response.data?.data || response.data;
   },
 
   // ──────────────────────────────────────────────────────

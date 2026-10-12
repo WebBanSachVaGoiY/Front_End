@@ -5,6 +5,7 @@ import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { orderApi } from '../../api/orderApi';
+import { paymentApi } from '../../api/paymentApi';
 import { Navbar } from '../../components/layout/Navbar';
 import { Footer } from '../../components/layout/Footer';
 import { Button } from '../../components/ui/Button';
@@ -60,11 +61,22 @@ export default function CheckoutPage() {
           quantity: it.quantity,
         })),
       });
+      if (paymentMethod === 'VNPAY') {
+        toast.info('Đang chuyển hướng sang cổng thanh toán VNPay Sandbox...');
+        const paymentRes = await paymentApi.createVNPayUrl(order.id);
+        if (paymentRes?.paymentUrl) {
+          window.location.href = paymentRes.paymentUrl;
+          return;
+        } else {
+          throw new Error('Không nhận được liên kết thanh toán từ máy chủ');
+        }
+      }
+
       await clearCart();
       setSuccess(order);
       toast.success('Đặt hàng thành công! 🎉');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Đặt hàng thất bại, vui lòng thử lại');
+      toast.error(err.response?.data?.message || err.message || 'Đặt hàng thất bại, vui lòng thử lại');
     } finally {
       setLoading(false);
     }

@@ -18,6 +18,7 @@ const CartPage = lazy(() => import('./pages/user/CartPage'));
 const CheckoutPage = lazy(() => import('./pages/user/CheckoutPage'));
 const OrderHistoryPage = lazy(() => import('./pages/user/OrderHistoryPage'));
 const ProfilePage = lazy(() => import('./pages/user/ProfilePage'));
+const PaymentResultPage = lazy(() => import('./pages/user/PaymentResultPage'));
 
 const DashboardPage = lazy(() => import('./pages/admin/DashboardPage'));
 const ManageCategoriesPage = lazy(() => import('./pages/admin/ManageCategoriesPage'));
@@ -47,6 +48,9 @@ export default function App() {
                 <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
                 <Route path="/orders" element={<ProtectedRoute><OrderHistoryPage /></ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+
+                {/* VNPay Return URL */}
+                <Route path="/payment/vnpay-return" element={<PaymentResultPage />} />
 
                 {/* Admin Routes */}
                 <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
