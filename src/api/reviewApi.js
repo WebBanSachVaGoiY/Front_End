@@ -1,13 +1,20 @@
 import api from './axios';
+import { INITIAL_REVIEWS } from '../utils/mockData';
 
 const REVIEWS_KEY = 'bookrunner_reviews';
 
 const getStoredReviews = () => {
   try {
     const raw = localStorage.getItem(REVIEWS_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+    // Khởi tạo sẵn các đánh giá mẫu khớp với số sao và lượng review của từng sách
+    localStorage.setItem(REVIEWS_KEY, JSON.stringify(INITIAL_REVIEWS));
+    return INITIAL_REVIEWS;
   } catch {
-    return [];
+    return INITIAL_REVIEWS;
   }
 };
 

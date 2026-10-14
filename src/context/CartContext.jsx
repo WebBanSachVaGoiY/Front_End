@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useReducer } from 'react';
 import { cartApi } from '../api/cartApi';
+import { interactionApi } from '../api/interactionApi';
 import { useAuth } from './AuthContext';
 
 const CartContext = createContext(null);
@@ -84,8 +85,18 @@ export function CartProvider({ children }) {
   }, [fetchCart]);
 
   const addToCart = async (bookId, quantity = 1) => {
+    // Kiểm tra xem sách đã tồn tại trong giỏ chưa (tránh spam ADD_TO_CART khi chỉ tăng số lượng)
+    const isAlreadyInCart = state.items.some(
+      (it) => String(it.id) === String(bookId) || String(it.book?.id) === String(bookId)
+    );
+
     await cartApi.addItem({ bookId, quantity });
     await fetchCart(true);
+
+    // Chỉ log hành vi ADD_TO_CART cho RecSys khi là cuốn sách mới thêm vào giỏ
+    if (isAuthenticated && !isAlreadyInCart) {
+      interactionApi.logInteraction({ bookId, interactionType: 'ADD_TO_CART' });
+    }
   };
 
   const updateQuantity = async (itemId, quantity) => {

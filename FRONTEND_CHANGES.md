@@ -549,4 +549,29 @@ dist/assets/DashboardPage-D4KRD5qq.js         380.55 kB │ gzip: 109.29 kB
 ### 8.4. Nghiệm thu build Frontend
 * `npm run build`: **2,577 modules transformed, build thành công trong 931ms (0 Errors, 0 Warnings)**.
 
+---
+
+## 🎯 9. TÍCH HỢP HỆ THỐNG GHI NHẬN HÀNH VI TƯƠNG TÁC (INTERACTION TRACKING - 12/10/2026)
+
+Nhằm cung cấp dữ liệu ngầm định (Implicit Feedback) cho hệ thống Gợi ý (RecSys), các sự kiện tương tác của người dùng đã được tích hợp khéo léo vào giao diện Frontend:
+
+### 9.1. API Service mới ([`src/api/interactionApi.js`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/Front_End/src/api/interactionApi.js))
+* Hàm `interactionApi.logInteraction({ bookId, interactionType })`:
+  * Gọi `POST /api/v1/interactions/log` với payload `{ bookId, interactionType }`.
+  * Cơ chế Fire-and-forget: Bắt và ghi nhận lỗi ngầm (`catch(() => {})`), tuyệt đối không làm chậm hoặc gián đoạn luồng hiển thị giao diện của khách hàng.
+
+### 9.2. Gắn Trigger Xem Chi Tiết Sách ([`src/pages/public/BookDetailPage.jsx`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/Front_End/src/pages/public/BookDetailPage.jsx))
+* Khi người dùng đã đăng nhập truy cập vào trang chi tiết cuốn sách:
+  * Sử dụng `useRef(lastTrackedBookIdRef)` theo dõi ID sách, ngăn chặn triệt để tình trạng React 18 StrictMode kích hoạt 2 lần liên tiếp (double-invoke) trong môi trường phát triển.
+  * Tự động gửi sự kiện `interactionType: 'VIEW'` ngầm lên server.
+
+### 9.3. Gắn Trigger Thêm Vào Giỏ Hàng ([`src/context/CartContext.jsx`](file:///C:/Users/testu/OneDrive/Máy tính/New folder (2)/Front_End/src/context/CartContext.jsx))
+* Xử lý tinh tế trong hàm `addToCart`:
+  * Kiểm tra trước xem cuốn sách đã có trong giỏ hàng hiện tại chưa (`isAlreadyInCart`).
+  * **Chỉ gửi sự kiện `ADD_TO_CART` khi người dùng thêm một cuốn sách mới vào giỏ** (phản ánh đúng nhu cầu sở thích mới).
+  * Nếu người dùng chỉ bấm tăng số lượng của cuốn sách đã có sẵn trong giỏ $\rightarrow$ Bỏ qua không gửi log lặp, tránh làm nhiễu dữ liệu huấn luyện của mô hình AI.
+
+### 9.4. Nghiệm thu Build Frontend
+* `npm run build`: **2,578 modules transformed, biên dịch thành công trong 2.12s (0 Errors, 0 Warnings)**.
+
 

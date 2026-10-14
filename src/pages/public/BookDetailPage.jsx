@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ShoppingCart, Zap, Minus, Plus,
@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { bookApi } from '../../api/bookApi';
 import { reviewApi } from '../../api/reviewApi';
+import { interactionApi } from '../../api/interactionApi';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/ui/Toast';
@@ -40,6 +41,15 @@ export default function BookDetailPage() {
   const [myComment, setMyComment] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
   const [canReviewState, setCanReviewState] = useState(null);
+
+  // Interaction Tracking: Ghi nhận sự kiện VIEW sách cho RecSys (chặn double-invoke từ StrictMode)
+  const lastTrackedBookIdRef = useRef(null);
+  useEffect(() => {
+    if (isAuthenticated && id && lastTrackedBookIdRef.current !== id) {
+      lastTrackedBookIdRef.current = id;
+      interactionApi.logInteraction({ bookId: id, interactionType: 'VIEW' });
+    }
+  }, [id, isAuthenticated]);
 
   useEffect(() => {
     const fetch = async () => {
