@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { TrendingUp, Package, Users, BookOpen, Activity, AlertCircle, RefreshCw } from 'lucide-react';
+import { TrendingUp, Package, Users, BookOpen, Activity, AlertCircle, RefreshCw, Sparkles, CheckCircle2, BarChart3, Play } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar,
@@ -10,9 +10,12 @@ import { formatCurrency, formatNumber } from '../../utils/formatCurrency';
 import { OrderStatusBadge } from '../../components/ui/Badge';
 import { formatDateTime } from '../../utils/formatDate';
 import { PageSpinner } from '../../components/ui/Spinner';
+import { Modal } from '../../components/ui/Modal';
+import { useToast } from '../../components/ui/Toast';
 import './AdminDashboard.css';
 
 export default function DashboardPage() {
+  const toast = useToast();
   const [stats, setStats] = useState({
     totalRevenue: 0,
     totalOrders: 0,
@@ -24,6 +27,12 @@ export default function DashboardPage() {
   const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [training, setTraining] = useState(false);
+  const [isRecSysModalOpen, setIsRecSysModalOpen] = useState(false);
+  const [trainType, setTrainType] = useState('all');
+  const [evaluating, setEvaluating] = useState(false);
+  const [evaluationResult, setEvaluationResult] = useState(null);
+  const [trainResult, setTrainResult] = useState(null);
 
   const fetchDashboardData = useCallback(async () => {
     setLoading(true);
@@ -60,6 +69,35 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
+
+  const handleTrainRecommendations = async () => {
+    setTraining(true);
+    try {
+      const res = await adminApi.trainRecommendations(trainType);
+      setTrainResult(res);
+      toast.success(`Đã huấn luyện mô hình (${trainType}) thành công!`);
+      handleEvaluate();
+    } catch (err) {
+      toast.error(
+        err.response?.data?.message ||
+          'Không thể huấn luyện mô hình gợi ý. Kiểm tra RecSys service (FastAPI) đã chạy chưa.'
+      );
+    } finally {
+      setTraining(false);
+    }
+  };
+
+  const handleEvaluate = async () => {
+    setEvaluating(true);
+    try {
+      const res = await adminApi.evaluateRecommendations(10);
+      setEvaluationResult(res);
+    } catch (err) {
+      console.error('Không thể đánh giá mô hình:', err);
+    } finally {
+      setEvaluating(false);
+    }
+  };
 
   const STAT_CARDS = [
     {
@@ -101,14 +139,27 @@ export default function DashboardPage() {
           <h1>Dashboard</h1>
           <p>Thống kê số liệu thực tế hệ thống BookRunner</p>
         </div>
-        <button
-          className="btn btn-outline btn-sm"
-          onClick={fetchDashboardData}
-          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-        >
-          <RefreshCw size={14} />
-          Làm mới
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={() => {
+              setIsRecSysModalOpen(true);
+              if (!evaluationResult) handleEvaluate();
+            }}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <Sparkles size={14} />
+            Quản lý Gợi ý (RecSys)
+          </button>
+          <button
+            className="btn btn-outline btn-sm"
+            onClick={fetchDashboardData}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <RefreshCw size={14} />
+            Làm mới
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -256,6 +307,131 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* RecSys Management Modal */}
+      <Modal
+        isOpen={isRecSysModalOpen}
+        onClose={() => setIsRecSysModalOpen(false)}
+        title="Quản lý & Đánh giá Hệ thống Gợi ý (RecSys)"
+        size="lg"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* Section 1: Huấn luyện mô hình */}
+          <div style={{ padding: '1.25rem', background: 'var(--bg-secondary, #f8fafc)', borderRadius: '8px', border: '1px solid var(--border-color, #e2e8f0)' }}>
+            <h4 style={{ margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Play size={16} color="var(--primary, #6C3DD3)" />
+              Huấn luyện Mô hình Khuyến nghị
+            </h4>
+            <p style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', color: 'var(--text-muted, #64748b)' }}>
+              Chọn thuật toán cần cập nhật. Hệ thống sẽ tự động làm tươi bộ đệm Redis sau khi hoàn tất.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
+              {[
+                { id: 'all', label: 'Toàn bộ Pipeline (Khuyên dùng)', desc: 'Chạy CBF, Co-Purchase rồi ALS' },
+                { id: 'content-based', label: 'Sách tương tự (CBF)', desc: 'TF-IDF & Cosine Similarity' },
+                { id: 'co-purchase', label: 'Thường mua cùng (FBT)', desc: 'Khai phá giỏ hàng order_items' },
+                { id: 'collaborative', label: 'Cá nhân hóa (ALS)', desc: 'Implicit Feedback & Time-Decay' },
+              ].map((opt) => (
+                <label
+                  key={opt.id}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    padding: '0.75rem',
+                    borderRadius: '6px',
+                    border: `1.5px solid ${trainType === opt.id ? 'var(--primary, #6C3DD3)' : 'var(--border-color, #cbd5e1)'}`,
+                    background: trainType === opt.id ? 'rgba(108, 61, 211, 0.05)' : '#fff',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, fontSize: '0.875rem' }}>
+                    <input
+                      type="radio"
+                      name="trainType"
+                      value={opt.id}
+                      checked={trainType === opt.id}
+                      onChange={() => setTrainType(opt.id)}
+                    />
+                    {opt.label}
+                  </div>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted, #64748b)', marginTop: '4px', marginLeft: '22px' }}>
+                    {opt.desc}
+                  </span>
+                </label>
+              ))}
+            </div>
+
+            <button
+              className="btn btn-primary"
+              onClick={handleTrainRecommendations}
+              disabled={training}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '180px', justifyContent: 'center' }}
+            >
+              <Sparkles size={16} />
+              {training ? 'Đang huấn luyện (có thể mất 15-30 giây)...' : `Bắt đầu Huấn luyện (${trainType.toUpperCase()})`}
+            </button>
+          </div>
+
+          {/* Section 2: Đo lường chất lượng mô hình (§11 Evaluation Metrics) */}
+          <div style={{ padding: '1.25rem', background: 'var(--bg-secondary, #f8fafc)', borderRadius: '8px', border: '1px solid var(--border-color, #e2e8f0)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+              <h4 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <BarChart3 size={16} color="var(--primary, #6C3DD3)" />
+                Chỉ số Đo lường Hiệu năng Mô hình (§11 Spec)
+              </h4>
+              <button
+                className="btn btn-outline btn-sm"
+                onClick={handleEvaluate}
+                disabled={evaluating}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <RefreshCw size={12} className={evaluating ? 'animate-spin' : ''} />
+                {evaluating ? 'Đang đo...' : 'Đo lường lại'}
+              </button>
+            </div>
+
+            {evaluationResult?.metrics ? (
+              <div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
+                  <div style={{ padding: '0.75rem', background: '#fff', borderRadius: '6px', textAlign: 'center', border: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Precision@10</div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#10B981', marginTop: '4px' }}>
+                      {((evaluationResult.metrics['precision_at_10'] || 0) * 100).toFixed(1)}%
+                    </div>
+                  </div>
+                  <div style={{ padding: '0.75rem', background: '#fff', borderRadius: '6px', textAlign: 'center', border: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Recall@10</div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#3B82F6', marginTop: '4px' }}>
+                      {((evaluationResult.metrics['recall_at_10'] || 0) * 100).toFixed(1)}%
+                    </div>
+                  </div>
+                  <div style={{ padding: '0.75rem', background: '#fff', borderRadius: '6px', textAlign: 'center', border: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>NDCG@10</div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#8B5CF6', marginTop: '4px' }}>
+                      {(evaluationResult.metrics['ndcg_at_10'] || 0).toFixed(3)}
+                    </div>
+                  </div>
+                  <div style={{ padding: '0.75rem', background: '#fff', borderRadius: '6px', textAlign: 'center', border: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Catalog Coverage</div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#F59E0B', marginTop: '4px' }}>
+                      {evaluationResult.metrics['catalog_coverage_pct'] || 0}%
+                    </div>
+                  </div>
+                </div>
+                {evaluationResult.summary && (
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#475569', fontStyle: 'italic', background: '#f1f5f9', padding: '0.5rem 0.75rem', borderRadius: '4px' }}>
+                    💡 {evaluationResult.summary}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-muted, #64748b)' }}>
+                {evaluating ? 'Đang tính toán các chỉ số Precision, Recall và Coverage...' : 'Chưa có dữ liệu đánh giá. Nhấn "Đo lường lại" để kiểm tra chất lượng mô hình hiện tại.'}
+              </p>
+            )}
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

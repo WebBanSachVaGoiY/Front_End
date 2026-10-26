@@ -5,6 +5,7 @@ import {
   BookOpen, Building, Calendar, Hash, Globe, Trash2,
 } from 'lucide-react';
 import { bookApi } from '../../api/bookApi';
+import { recommendationApi } from '../../api/recommendationApi';
 import { reviewApi } from '../../api/reviewApi';
 import { interactionApi } from '../../api/interactionApi';
 import { useCart } from '../../context/CartContext';
@@ -32,6 +33,7 @@ export default function BookDetailPage() {
   const [book, setBook] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [related, setRelated] = useState([]);
+  const [fbtBooks, setFbtBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
@@ -62,12 +64,28 @@ export default function BookDetailPage() {
         setBook(bookData);
         setReviews(reviewData.content || reviewData || []);
 
-        if (bookData.category?.id) {
-          const relatedData = await bookApi.getBooks({
-            categoryId: bookData.category.id,
-            size: 4,
-          }).catch(() => ({ content: [] }));
-          setRelated((relatedData.content || []).filter((b) => b.id !== bookData.id));
+        // Gợi ý sách tương tự (CBF) — fallback sang cùng danh mục nếu chưa có dữ liệu mô hình
+        try {
+          let similar = await recommendationApi.getRelated(bookData.id, 4);
+          if (similar.length === 0 && bookData.category?.id) {
+            const fallback = await bookApi
+              .getBooks({ categoryId: bookData.category.id, size: 5 })
+              .catch(() => ({ content: [] }));
+            similar = (fallback.content || [])
+              .filter((b) => String(b.id) !== String(bookData.id))
+              .slice(0, 4);
+          }
+          setRelated(similar);
+        } catch {
+          setRelated([]);
+        }
+
+        // Thường được mua cùng (FBT)
+        try {
+          const fbt = await recommendationApi.getFrequentlyBoughtTogether(bookData.id, 4);
+          setFbtBooks(fbt);
+        } catch {
+          setFbtBooks([]);
         }
 
         if (isAuthenticated) {
@@ -468,14 +486,28 @@ export default function BookDetailPage() {
               )}
             </div>
 
+            {/* Frequently Bought Together */}
+            {fbtBooks.length > 0 && (
+              <div className="related-section animate-fadeInUp">
+                <div className="section-header">
+                  <h2 className="section-title">Thường được mua cùng</h2>
+                </div>
+                <div className="book-grid">
+                  {fbtBooks.map((b) => <BookCard key={b.id} book={b} />)}
+                </div>
+              </div>
+            )}
+
             {/* Related Books */}
             {related.length > 0 && (
               <div className="related-section animate-fadeInUp">
                 <div className="section-header">
-                  <h2 className="section-title">Sách cùng danh mục</h2>
-                  <Link to={`/books?categoryId=${book.category?.id}`} className="see-all-link">
-                    Xem thêm →
-                  </Link>
+                  <h2 className="section-title">Sách tương tự</h2>
+                  {book.category?.id && (
+                    <Link to={`/books?categoryId=${book.category.id}`} className="see-all-link">
+                      Xem thêm →
+                    </Link>
+                  )}
                 </div>
                 <div className="book-grid">
                   {related.map((b) => <BookCard key={b.id} book={b} />)}

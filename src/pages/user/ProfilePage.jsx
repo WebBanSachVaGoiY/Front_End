@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { User, Mail, Phone, MapPin, Lock, Save } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/ui/Toast';
@@ -10,7 +11,8 @@ import { Input } from '../../components/ui/Input';
 import './ProfilePage.css';
 
 export default function ProfilePage() {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, logout } = useAuth();
+  const navigate = useNavigate();
   const toast = useToast();
 
   const [profileForm, setProfileForm] = useState({
@@ -61,8 +63,12 @@ export default function ProfilePage() {
         currentPassword: passwordForm.currentPassword,
         newPassword: passwordForm.newPassword,
       });
-      toast.success('Đổi mật khẩu thành công');
+      toast.success('Đổi mật khẩu thành công! Vui lòng đăng nhập lại với mật khẩu mới.');
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setTimeout(async () => {
+        await logout();
+        navigate('/login');
+      }, 1200);
     } catch (err) {
       toast.error(err.response?.data?.message || err.message || 'Đổi mật khẩu thất bại');
     } finally {

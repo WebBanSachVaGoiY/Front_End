@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, BookOpen, Star, Zap, TrendingUp, Sparkles } from 'lucide-react';
 import { bookApi } from '../../api/bookApi';
+import { recommendationApi } from '../../api/recommendationApi';
+import { useAuth } from '../../context/AuthContext';
 import { BookCard } from '../../components/book/BookCard';
 import { PageSpinner } from '../../components/ui/Spinner';
 import { Button } from '../../components/ui/Button';
@@ -15,24 +17,30 @@ export default function HomePage() {
   const [recommendedBooks, setRecommendedBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Đã đăng nhập → gợi ý cá nhân hoá (For You); khách vãng lai → sách bán chạy (Trending)
+        const recommendationsPromise = isAuthenticated
+          ? recommendationApi.getForYou(8)
+          : recommendationApi.getTrending(8);
+
         const [featured, newer, recommended] = await Promise.all([
           bookApi.getFeaturedBooks().catch(() => ({ content: [] })),
           bookApi.getBooks({ sort: 'newest', size: 8 }).catch(() => ({ content: [] })),
-          bookApi.getRecommendations().catch(() => ({ content: [] })),
+          recommendationsPromise.catch(() => []),
         ]);
         setFeaturedBooks(featured.content || featured || []);
         setNewBooks(newer.content || newer || []);
-        setRecommendedBooks(recommended.content || recommended || []);
+        setRecommendedBooks(Array.isArray(recommended) ? recommended : recommended.content || []);
       } finally {
         setLoading(false);
       }
     };
     fetchData();
-  }, []);
+  }, [isAuthenticated]);
 
   const STATS = [
     { icon: <BookOpen size={24} />, value: '10,000+', label: 'Đầu sách' },
@@ -120,8 +128,12 @@ export default function HomePage() {
             <div className="container">
               <div className="section-header">
                 <h2 className="section-title">
-                  <Sparkles size={24} className="section-title-icon" style={{ color: 'var(--accent)' }} />
-                  Gợi ý dành cho bạn
+                  {isAuthenticated ? (
+                    <Sparkles size={24} className="section-title-icon" style={{ color: 'var(--accent)' }} />
+                  ) : (
+                    <TrendingUp size={24} className="section-title-icon" style={{ color: 'var(--accent)' }} />
+                  )}
+                  {isAuthenticated ? 'Gợi ý dành cho bạn' : 'Sách bán chạy'}
                 </h2>
                 <Link to="/books" className="see-all-link">
                   Xem tất cả <ArrowRight size={16} />
