@@ -1,14 +1,23 @@
-import { createContext, useContext, useEffect, useReducer } from 'react';
+import { createContext, useContext, useEffect, useReducer, useCallback } from 'react';
 import { authApi } from '../api/authApi';
 
 const AuthContext = createContext(null);
 
+const getStoredUser = () => {
+  try {
+    const raw = localStorage.getItem('bookrunner_current_user');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
 const initialState = {
-  user: null,
+  user: getStoredUser(),
   accessToken: localStorage.getItem('accessToken') || null,
   refreshToken: localStorage.getItem('refreshToken') || null,
   isLoading: true,
-  isAuthenticated: false,
+  isAuthenticated: Boolean(localStorage.getItem('accessToken')),
 };
 
 function authReducer(state, action) {
@@ -27,6 +36,7 @@ function authReducer(state, action) {
     case 'LOGOUT':
       return {
         ...initialState,
+        user: null,
         accessToken: null,
         refreshToken: null,
         isLoading: false,
@@ -43,6 +53,18 @@ function authReducer(state, action) {
 
 export function AuthProvider({ children }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
+
+  const logout = useCallback(async () => {
+    try {
+      await authApi.logout();
+    } catch {
+      // Bỏ qua lỗi API (ví dụ token đã chết 401 hoặc rớt mạng)
+    } finally {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      dispatch({ type: 'LOGOUT' });
+    }
+  }, []);
 
   // On mount: validate existing token and load user info
   useEffect(() => {
@@ -83,16 +105,28 @@ export function AuthProvider({ children }) {
     return () => {
       window.removeEventListener('auth:logout', handleForceLogout);
     };
-  }, []);
+  }, [logout]);
 
   const login = async (email, password) => {
     const data = await authApi.login({ email, password });
     localStorage.setItem('accessToken', data.accessToken);
     localStorage.setItem('refreshToken', data.refreshToken);
+    let fullUser = data.user;
+    if (!fullUser?.phone || !fullUser?.address) {
+      try {
+        const profile = await authApi.getMe();
+        if (profile) {
+          fullUser = { ...fullUser, ...profile };
+          localStorage.setItem('bookrunner_current_user', JSON.stringify(fullUser));
+        }
+      } catch {
+        // fallback giữ nguyên fullUser từ login
+      }
+    }
     dispatch({
       type: 'LOGIN_SUCCESS',
       payload: {
-        user: data.user,
+        user: fullUser,
         accessToken: data.accessToken,
         refreshToken: data.refreshToken,
       },
@@ -100,20 +134,14 @@ export function AuthProvider({ children }) {
     return data;
   };
 
-  const logout = async () => {
-    try {
-      await authApi.logout();
-    } catch {
-      // Bỏ qua lỗi API (ví dụ token đã chết 401 hoặc rớt mạng)
-    } finally {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      dispatch({ type: 'LOGOUT' });
-    }
-  };
-
   const updateUser = (userData) => {
-    dispatch({ type: 'SET_USER', payload: { ...state.user, ...userData } });
+    const updated = { ...state.user, ...userData };
+    try {
+      localStorage.setItem('bookrunner_current_user', JSON.stringify(updated));
+    } catch {
+      // ignore
+    }
+    dispatch({ type: 'SET_USER', payload: updated });
   };
 
   const isAdmin = () => state.user?.role === 'ROLE_ADMIN';

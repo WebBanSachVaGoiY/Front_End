@@ -101,26 +101,28 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* CTA Banner - Moved up right below hero */}
-        <section className="cta-section">
-          <div className="container">
-            <div className="cta-card">
-              <div className="cta-orb" />
-              <div className="cta-content">
-                <h2>Bắt đầu hành trình đọc sách ngay hôm nay</h2>
-                <p>Đăng ký miễn phí, nhận gợi ý sách cá nhân hoá từ AI</p>
-                <div className="cta-actions">
-                  <Button variant="accent" size="lg" onClick={() => navigate('/register')}>
-                    Đăng ký miễn phí
-                  </Button>
-                  <Button variant="outline" size="lg" onClick={() => navigate('/books')}>
-                    Khám phá ngay
-                  </Button>
+        {/* CTA Banner - Chỉ hiển thị cho khách vãng lai, ẩn hoàn toàn sau khi đã đăng nhập */}
+        {!isAuthenticated && (
+          <section className="cta-section">
+            <div className="container">
+              <div className="cta-card">
+                <div className="cta-orb" />
+                <div className="cta-content">
+                  <h2>Bắt đầu hành trình đọc sách ngay hôm nay</h2>
+                  <p>Đăng ký miễn phí, nhận gợi ý sách cá nhân hoá từ AI</p>
+                  <div className="cta-actions">
+                    <Button variant="accent" size="lg" onClick={() => navigate('/register')}>
+                      Đăng ký miễn phí
+                    </Button>
+                    <Button variant="outline" size="lg" onClick={() => navigate('/books')}>
+                      Khám phá ngay
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* Recommended Books */}
         {recommendedBooks.length > 0 && (

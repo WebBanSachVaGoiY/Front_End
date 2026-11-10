@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
 import { BookOpen, Globe, Mail, Phone, Share2 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import './Footer.css';
 
 export function Footer() {
+  const { isAuthenticated } = useAuth();
   return (
     <footer className="footer">
       <div className="footer-inner container">
@@ -39,8 +41,12 @@ export function Footer() {
           <div className="footer-col">
             <h4 className="footer-heading">Tài khoản</h4>
             <ul className="footer-links">
-              <li><Link to="/login">Đăng nhập</Link></li>
-              <li><Link to="/register">Đăng ký</Link></li>
+              {!isAuthenticated ? (
+                <>
+                  <li><Link to="/login">Đăng nhập</Link></li>
+                  <li><Link to="/register">Đăng ký</Link></li>
+                </>
+              ) : null}
               <li><Link to="/profile">Hồ sơ</Link></li>
               <li><Link to="/orders">Đơn hàng</Link></li>
             </ul>

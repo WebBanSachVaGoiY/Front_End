@@ -21,6 +21,17 @@ export default function ProfilePage() {
     phone: user?.phone || '',
     address: user?.address || '',
   });
+
+  useEffect(() => {
+    if (user) {
+      setProfileForm((prev) => ({
+        fullName: prev.fullName || user.fullName || '',
+        email: prev.email || user.email || '',
+        phone: prev.phone || user.phone || '',
+        address: prev.address || user.address || '',
+      }));
+    }
+  }, [user]);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
     newPassword: '',

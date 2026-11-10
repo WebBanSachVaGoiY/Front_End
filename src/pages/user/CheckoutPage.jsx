@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Phone, User, FileText, CheckCircle, Package } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/ui/Toast';
+import { authApi } from '../../api/authApi';
 import { orderApi } from '../../api/orderApi';
 import { paymentApi } from '../../api/paymentApi';
 import { Navbar } from '../../components/layout/Navbar';
@@ -16,7 +17,7 @@ import './CheckoutPage.css';
 
 export default function CheckoutPage() {
   const { items, subtotal, discount, shippingFee, getFinalAmount, clearCart } = useCart();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
 
@@ -26,6 +27,43 @@ export default function CheckoutPage() {
     shippingAddress: user?.address || '',
     note: '',
   });
+
+  // Tự động đồng bộ thông tin khách hàng từ AuthContext vào form khi user thay đổi/tải xong
+  useEffect(() => {
+    if (user) {
+      setForm((prev) => ({
+        ...prev,
+        recipientName: prev.recipientName ? prev.recipientName : (user.fullName || ''),
+        recipientPhone: prev.recipientPhone ? prev.recipientPhone : (user.phone || ''),
+        shippingAddress: prev.shippingAddress ? prev.shippingAddress : (user.address || ''),
+      }));
+    }
+  }, [user]);
+
+  // Nếu user đã đăng nhập nhưng trong state cục bộ còn thiếu sđt hoặc địa chỉ, chủ động tải thông tin mới nhất từ API /auth/me
+  useEffect(() => {
+    const syncFullProfile = async () => {
+      if (!user) return;
+      if (!user.phone || !user.address) {
+        try {
+          const profile = await authApi.getMe();
+          if (profile) {
+            updateUser(profile);
+            setForm((prev) => ({
+              ...prev,
+              recipientName: prev.recipientName ? prev.recipientName : (profile.fullName || ''),
+              recipientPhone: prev.recipientPhone ? prev.recipientPhone : (profile.phone || ''),
+              shippingAddress: prev.shippingAddress ? prev.shippingAddress : (profile.address || ''),
+            }));
+          }
+        } catch {
+          // Bỏ qua lỗi nếu offline
+        }
+      }
+    };
+    syncFullProfile();
+  }, [user, updateUser]);
+
   const [paymentMethod, setPaymentMethod] = useState('COD');
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);

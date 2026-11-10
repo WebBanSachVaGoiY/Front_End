@@ -44,6 +44,8 @@ export const authApi = {
         username: resData.username,
         email: resData.email,
         fullName: resData.fullName,
+        phone: resData.phone || '',
+        address: resData.address || '',
         role: resData.role,
       };
       localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userObj));
@@ -145,6 +147,8 @@ export const authApi = {
         username: newUser.username,
         email: newUser.email,
         fullName: newUser.fullName,
+        phone: newUser.phone || '',
+        address: newUser.address || '',
         role: newUser.role,
       };
     }
