@@ -52,7 +52,7 @@ export default function PaymentResultPage() {
     };
 
     verifyPayment();
-  }, [searchParams]);
+  }, [searchParams, clearCart]);
 
   if (loading) {
     return (

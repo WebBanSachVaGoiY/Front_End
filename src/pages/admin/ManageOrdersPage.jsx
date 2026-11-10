@@ -20,25 +20,53 @@ const STATUS_TRANSITIONS = {
 };
 
 export default function ManageOrdersPage() {
+  const PAGE_SIZE = 15;
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
   const [updating, setUpdating] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const toast = useToast();
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (pageIndex = page, status = statusFilter) => {
     setLoading(true);
     try {
-      const data = await orderApi.getAllOrders({ size: 50 });
-      setOrders(data.content || data || []);
+      const params = {
+        page: pageIndex,
+        size: PAGE_SIZE,
+      };
+      if (status) {
+        params.status = status;
+      }
+      const data = await orderApi.getAllOrders(params);
+      const items = data.content || (Array.isArray(data) ? data : []);
+      setOrders(items);
+      setTotalPages(data.totalPages || 1);
+      setTotalElements(data.totalElements ?? items.length);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchOrders(); }, []);
+  useEffect(() => {
+    fetchOrders(0, '');
+  }, []);
+
+  const handleStatusFilterChange = (newStatus) => {
+    setStatusFilter(newStatus);
+    setPage(0);
+    fetchOrders(0, newStatus);
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage < 0 || newPage >= totalPages) return;
+    setPage(newPage);
+    fetchOrders(newPage, statusFilter);
+  };
 
   const handleStatusChange = async (orderId, newStatus) => {
     setUpdating(orderId);
@@ -85,7 +113,7 @@ export default function ManageOrdersPage() {
           className="form-input"
           style={{ width: 180, height: 50 }}
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          onChange={(e) => handleStatusFilterChange(e.target.value)}
         >
           <option value="">Tất cả trạng thái</option>
           {Object.entries(ORDER_STATUS).map(([key, { label }]) => (
@@ -173,6 +201,56 @@ export default function ManageOrdersPage() {
               <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                 Không tìm thấy đơn hàng nào
               </p>
+            )}
+
+            {totalPages > 1 && (
+              <div className="admin-pagination-wrapper">
+                <div className="admin-pagination-info">
+                  Hiển thị <strong>{filtered.length}</strong> / <strong>{totalElements}</strong> đơn hàng (Trang {page + 1}/{totalPages})
+                </div>
+                <div className="admin-pagination">
+                  <button
+                    type="button"
+                    className="admin-page-btn"
+                    disabled={page === 0}
+                    onClick={() => handlePageChange(page - 1)}
+                  >
+                    Trước
+                  </button>
+
+                  {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 7) {
+                      pageNum = i;
+                    } else if (page <= 3) {
+                      pageNum = i;
+                    } else if (page >= totalPages - 4) {
+                      pageNum = totalPages - 7 + i;
+                    } else {
+                      pageNum = page - 3 + i;
+                    }
+                    return (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        className={`admin-page-btn ${pageNum === page ? 'active' : ''}`}
+                        onClick={() => handlePageChange(pageNum)}
+                      >
+                        {pageNum + 1}
+                      </button>
+                    );
+                  })}
+
+                  <button
+                    type="button"
+                    className="admin-page-btn"
+                    disabled={page >= totalPages - 1}
+                    onClick={() => handlePageChange(page + 1)}
+                  >
+                    Sau
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         )}

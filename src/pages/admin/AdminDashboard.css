@@ -136,3 +136,59 @@
   .admin-page { padding: var(--space-5); }
   .stat-cards { grid-template-columns: 1fr 1fr; gap: var(--space-3); }
 }
+
+/* Admin Pagination */
+.admin-pagination-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.admin-pagination-info {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.admin-pagination {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.admin-page-btn {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 8px;
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.admin-page-btn:hover:not(:disabled) {
+  border-color: var(--primary-light);
+  color: var(--primary-light);
+}
+
+.admin-page-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+  font-weight: 700;
+}
+
+.admin-page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

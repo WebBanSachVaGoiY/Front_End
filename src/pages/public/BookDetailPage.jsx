@@ -26,7 +26,7 @@ import './BookDetailPage.css';
 export default function BookDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const { addToCart, items: cartItems, setBuyNowBookIds } = useCart();
   const { isAuthenticated, user } = useAuth();
   const toast = useToast();
 
@@ -142,6 +142,31 @@ export default function BookDetailPage() {
     setAdding(true);
     try {
       await addToCart(book.id, quantity);
+
+      // Nếu trong giỏ đang có sản phẩm khác ngoài cuốn sách này, hỏi người dùng
+      const otherItems = cartItems.filter(
+        (it) => String(it.book?.id || it.id) !== String(book.id)
+      );
+
+      if (otherItems.length > 0) {
+        const confirmed = window.confirm(
+          `Giỏ hàng của bạn đang có ${otherItems.length} sản phẩm khác.\n\n` +
+          `Bạn muốn thanh toán TẤT CẢ sản phẩm trong giỏ hay CHỈ cuốn "${book.title}"?\n\n` +
+          `• Nhấn OK  → Thanh toán chỉ cuốn sách này\n` +
+          `• Nhấn Hủy → Thanh toán tất cả giỏ hàng`
+        );
+        if (confirmed) {
+          // Chỉ checkout cuốn sách hiện tại
+          setBuyNowBookIds([book.id]);
+        } else {
+          // Checkout toàn bộ giỏ
+          setBuyNowBookIds(null);
+        }
+      } else {
+        // Giỏ chỉ có sách này, không cần hỏi
+        setBuyNowBookIds(null);
+      }
+
       navigate('/checkout');
     } catch {
       toast.error('Không thể xử lý yêu cầu mua ngay');

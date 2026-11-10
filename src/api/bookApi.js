@@ -49,6 +49,9 @@ export const bookApi = {
   // Public endpoints
   getBooks: async (params = {}) => {
     const queryParams = { ...params };
+    if (params.search && !queryParams.keyword) {
+      queryParams.keyword = params.search;
+    }
     if (params.sort) {
       if (params.sort === 'price_asc') {
         queryParams.sortBy = 'price';
@@ -283,6 +286,20 @@ export const bookApi = {
       const books = getStoredBooks();
       const filtered = books.filter((b) => String(b.id) !== String(id));
       saveBooks(filtered);
+    }
+  },
+
+  getAdminBooks: async (params = {}) => {
+    const queryParams = { ...params };
+    if (params.search && !queryParams.keyword) {
+      queryParams.keyword = params.search;
+    }
+    try {
+      const { data } = await api.get('/admin/books', { params: queryParams });
+      return data?.data || data;
+    } catch (err) {
+      if (!isOfflineOrUnimplemented(err)) throw err;
+      return bookApi.getBooks(params);
     }
   },
 

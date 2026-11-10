@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Trash2, Plus, Minus, ShoppingBag, Tag, X, ArrowRight, ShoppingCart,
+  Trash2, Plus, Minus, ShoppingBag, ArrowRight, ShoppingCart,
 } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useToast } from '../../components/ui/Toast';
@@ -11,22 +11,17 @@ import { Button } from '../../components/ui/Button';
 import { Spinner } from '../../components/ui/Spinner';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { DEFAULT_BOOK_COVER } from '../../utils/constants';
-import { voucherApi } from '../../api/voucherApi';
 import './CartPage.css';
 
 export default function CartPage() {
   const {
-    items, subtotal, discount, shippingFee, voucher,
-    updateQuantity, removeItem, deleteSelectedItems, clearCart, applyVoucher, removeVoucher, getFinalAmount,
+    items, subtotal, discount, shippingFee,
+    updateQuantity, removeItem, deleteSelectedItems, clearCart, getFinalAmount, setBuyNowBookIds,
     isLoading,
   } = useCart();
   const toast = useToast();
   const navigate = useNavigate();
 
-  const [voucherCode, setVoucherCode] = useState('');
-  const [voucherLoading, setVoucherLoading] = useState(false);
-  const [showVouchers, setShowVouchers] = useState(false);
-  const [availableVouchers, setAvailableVouchers] = useState([]);
   const [removingId, setRemovingId] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [isDeletingBulk, setIsDeletingBulk] = useState(false);
@@ -93,36 +88,6 @@ export default function CartPage() {
     if (!confirm('Xóa tất cả sản phẩm trong giỏ hàng?')) return;
     await clearCart();
     toast.success('Đã xóa tất cả sản phẩm');
-  };
-
-  const handleApplyVoucher = async () => {
-    if (!voucherCode.trim()) return;
-    setVoucherLoading(true);
-    try {
-      const v = await voucherApi.validateVoucher(voucherCode, subtotal);
-      applyVoucher(v);
-      toast.success(`Áp dụng mã "${v.code}" thành công! Giảm ${v.discount}%`);
-      setVoucherCode('');
-      setShowVouchers(false);
-    } catch (err) {
-      toast.error(err.message || 'Mã giảm giá không hợp lệ');
-    } finally {
-      setVoucherLoading(false);
-    }
-  };
-
-  const handleShowVouchers = async () => {
-    if (availableVouchers.length === 0) {
-      const list = await voucherApi.getVouchers();
-      setAvailableVouchers(list);
-    }
-    setShowVouchers((v) => !v);
-  };
-
-  const handleSelectVoucher = (v) => {
-    applyVoucher(v);
-    toast.success(`Áp dụng mã "${v.code}" thành công!`);
-    setShowVouchers(false);
   };
 
   if (isLoading && items.length === 0) {
@@ -274,63 +239,8 @@ export default function CartPage() {
                 <div className="summary-card card">
                   <h3>Tóm tắt đơn hàng</h3>
 
-                  {/* Voucher */}
-                  <div className="voucher-section">
-                    <div className="voucher-header">
-                      <Tag size={16} />
-                      <span>Mã giảm giá</span>
-                      <button className="voucher-list-btn" onClick={handleShowVouchers}>
-                        Chọn mã
-                      </button>
-                    </div>
-
-                    {showVouchers && (
-                      <div className="voucher-dropdown animate-fadeInDown">
-                        {availableVouchers.map((v) => (
-                          <button
-                            key={v.id}
-                            className="voucher-option"
-                            onClick={() => handleSelectVoucher(v)}
-                          >
-                            <div className="voucher-code">{v.code}</div>
-                            <div className="voucher-desc">{v.name}</div>
-                            {v.minOrder > 0 && (
-                              <div className="voucher-min">Tối thiểu {formatCurrency(v.minOrder)}</div>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-
-                    {voucher ? (
-                      <div className="voucher-applied">
-                        <span className="voucher-applied-code">{voucher.code}</span>
-                        <span className="voucher-applied-discount">-{voucher.discount}%</span>
-                        <button className="voucher-remove" onClick={removeVoucher}>
-                          <X size={14} />
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="voucher-input-row">
-                        <input
-                          type="text"
-                          className="form-input"
-                          placeholder="Nhập mã giảm giá"
-                          value={voucherCode}
-                          onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
-                          onKeyDown={(e) => e.key === 'Enter' && handleApplyVoucher()}
-                        />
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={handleApplyVoucher}
-                          loading={voucherLoading}
-                        >
-                          Áp dụng
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+                  {/* Voucher — Tính năng đang phát triển, tạm ẩn vì chưa có backend hỗ trợ */}
+                  {/* <div className="voucher-section"> ... </div> */}
 
                   <div className="divider" />
 
@@ -363,7 +273,10 @@ export default function CartPage() {
                     fullWidth
                     icon={<ArrowRight size={18} />}
                     iconPosition="right"
-                    onClick={() => navigate('/checkout')}
+                    onClick={() => {
+                      setBuyNowBookIds(null);
+                      navigate('/checkout');
+                    }}
                     id="checkout-btn"
                   >
                     Tiến hành đặt hàng

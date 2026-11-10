@@ -16,10 +16,27 @@ import { DEFAULT_BOOK_COVER } from '../../utils/constants';
 import './CheckoutPage.css';
 
 export default function CheckoutPage() {
-  const { items, subtotal, discount, shippingFee, getFinalAmount, clearCart } = useCart();
+  const { items: allItems, subtotal: rawSubtotal, discount, shippingFee, getFinalAmount, clearCart, deleteSelectedItems, buyNowBookIds, setBuyNowBookIds } = useCart();
   const { user, updateUser } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
+
+  // Reset trạng thái buyNow khi rời khỏi trang checkout
+  useEffect(() => {
+    return () => {
+      setBuyNowBookIds(null);
+    };
+  }, [setBuyNowBookIds]);
+
+  // Nếu "Mua ngay" đã chọn sách cụ thể thì chỉ checkout những sách đó
+  const items = buyNowBookIds
+    ? allItems.filter((it) => buyNowBookIds.map(String).includes(String(it.book?.id || it.id)))
+    : allItems;
+  const subtotal = items.reduce((sum, it) => {
+    const price = it.book?.discountPrice || it.book?.price || 0;
+    return sum + price * it.quantity;
+  }, 0);
+  const finalAmount = items.length === 0 ? 0 : Math.max(0, subtotal - discount + shippingFee);
 
   const [form, setForm] = useState({
     recipientName: user?.fullName || '',
@@ -86,6 +103,15 @@ export default function CheckoutPage() {
     const errs = validate();
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
 
+    // Kiểm tra tồn kho trước khi đặt hàng
+    const outOfStock = items.filter((it) => it.quantity > (it.book?.stockQuantity ?? 0));
+    if (outOfStock.length > 0) {
+      toast.error(
+        `Các sách sau không đủ hàng: ${outOfStock.map((it) => it.book?.title || 'Không rõ').join(', ')}`
+      );
+      return;
+    }
+
     setLoading(true);
     try {
       const order = await orderApi.createOrder({
@@ -103,6 +129,13 @@ export default function CheckoutPage() {
         toast.info('Đang chuyển hướng sang cổng thanh toán VNPay Sandbox...');
         const paymentRes = await paymentApi.createVNPayUrl(order.id);
         if (paymentRes?.paymentUrl) {
+          // Xóa giỏ hàng trước khi chuyển hướng sang VNPay vì đơn hàng đã được tạo trong database
+          if (buyNowBookIds && buyNowBookIds.length > 0) {
+            await deleteSelectedItems(items.map((it) => it.book?.id || it.id));
+            setBuyNowBookIds(null);
+          } else {
+            await clearCart();
+          }
           window.location.href = paymentRes.paymentUrl;
           return;
         } else {
@@ -110,7 +143,12 @@ export default function CheckoutPage() {
         }
       }
 
-      await clearCart();
+      if (buyNowBookIds && buyNowBookIds.length > 0) {
+        await deleteSelectedItems(items.map((it) => it.book?.id || it.id));
+        setBuyNowBookIds(null);
+      } else {
+        await clearCart();
+      }
       setSuccess(order);
       toast.success('Đặt hàng thành công! 🎉');
     } catch (err) {
@@ -313,7 +351,7 @@ export default function CheckoutPage() {
                     <div className="divider" />
                     <div className="price-row total-row">
                       <span>Tổng cộng</span>
-                      <span className="total-amount">{formatCurrency(getFinalAmount())}</span>
+                      <span className="total-amount">{formatCurrency(Math.max(0, finalAmount))}</span>
                     </div>
                   </div>
                 </div>

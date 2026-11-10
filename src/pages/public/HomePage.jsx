@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, BookOpen, Star, Zap, TrendingUp, Sparkles } from 'lucide-react';
+import { ArrowRight, Star, Zap, TrendingUp, Sparkles } from 'lucide-react';
 import { bookApi } from '../../api/bookApi';
 import { recommendationApi } from '../../api/recommendationApi';
 import { useAuth } from '../../context/AuthContext';
@@ -42,13 +42,6 @@ export default function HomePage() {
     fetchData();
   }, [isAuthenticated]);
 
-  const STATS = [
-    { icon: <BookOpen size={24} />, value: '10,000+', label: 'Đầu sách' },
-    { icon: <Star size={24} />, value: '50,000+', label: 'Đánh giá' },
-    { icon: <TrendingUp size={24} />, value: '5,000+', label: 'Khách hàng' },
-    { icon: <Zap size={24} />, value: '99%', label: 'Hài lòng' },
-  ];
-
   if (loading) return (
     <>
       <Navbar />
@@ -82,21 +75,6 @@ export default function HomePage() {
                 Hàng nghìn đầu sách chất lượng, giá tốt, giao hàng tận nơi.
                 Hệ thống AI gợi ý sách phù hợp với sở thích của bạn.
               </p>
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div className="stats-bar">
-            <div className="container stats-grid">
-              {STATS.map((stat, i) => (
-                <div key={i} className="stat-item animate-fadeInUp" style={{ animationDelay: `${i * 100}ms` }}>
-                  <span className="stat-icon">{stat.icon}</span>
-                  <div>
-                    <div className="stat-value">{stat.value}</div>
-                    <div className="stat-label">{stat.label}</div>
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
         </section>
