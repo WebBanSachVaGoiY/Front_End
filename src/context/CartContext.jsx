@@ -13,6 +13,8 @@ const initialState = {
   shippingFee: 30000,
   voucher: null,
   isLoading: false,
+  // null = tất cả sản phẩm (mặc định), Set<bookId> = chỉ sản phẩm được chọn (dùng cho "Mua ngay")
+  buyNowBookIds: null,
 };
 
 function cartReducer(state, action) {
@@ -26,7 +28,10 @@ function cartReducer(state, action) {
         return sum + price * item.quantity;
       }, 0);
       const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-      return { ...state, items, subtotal, totalItems, isLoading: false };
+      const discount = state.voucher && items.length > 0
+        ? Math.round(subtotal * (state.voucher.discount / 100))
+        : 0;
+      return { ...state, items, subtotal, discount, totalItems, isLoading: false };
     }
     case 'UPDATE_ITEM_QTY': {
       const { itemId, quantity } = action.payload;
@@ -41,7 +46,10 @@ function cartReducer(state, action) {
         return sum + price * item.quantity;
       }, 0);
       const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-      return { ...state, items, subtotal, totalItems };
+      const discount = state.voucher && items.length > 0
+        ? Math.round(subtotal * (state.voucher.discount / 100))
+        : 0;
+      return { ...state, items, subtotal, discount, totalItems };
     }
     case 'APPLY_VOUCHER': {
       const discount = action.payload
@@ -51,6 +59,9 @@ function cartReducer(state, action) {
     }
     case 'CLEAR_VOUCHER':
       return { ...state, voucher: null, discount: 0 };
+    case 'SET_BUY_NOW_BOOK_IDS':
+      // null = checkout tất cả; mảng bookId = chỉ checkout các sách được chỉ định
+      return { ...state, buyNowBookIds: action.payload };
     case 'CLEAR_CART':
       return { ...initialState };
     default:
@@ -142,7 +153,13 @@ export function CartProvider({ children }) {
     dispatch({ type: 'CLEAR_VOUCHER' });
   };
 
+  const setBuyNowBookIds = (bookIds) => {
+    // bookIds: null (checkout tất cả) hoặc mảng bookId (chỉ checkout những sách này)
+    dispatch({ type: 'SET_BUY_NOW_BOOK_IDS', payload: bookIds });
+  };
+
   const getFinalAmount = () => {
+    if (state.items.length === 0) return 0;
     return Math.max(0, state.subtotal - state.discount + state.shippingFee);
   };
 
@@ -158,6 +175,7 @@ export function CartProvider({ children }) {
         clearCart,
         applyVoucher,
         removeVoucher,
+        setBuyNowBookIds,
         getFinalAmount,
       }}
     >

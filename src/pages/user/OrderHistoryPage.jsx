@@ -13,17 +13,41 @@ import { DEFAULT_BOOK_COVER } from '../../utils/constants';
 import './OrderHistoryPage.css';
 
 export default function OrderHistoryPage() {
+  const PAGE_SIZE = 10;
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
   const [expandedId, setExpandedId] = useState(null);
   const [cancellingId, setCancellingId] = useState(null);
   const toast = useToast();
 
+  const fetchOrders = async (pageIndex = page) => {
+    setLoading(true);
+    try {
+      const data = await orderApi.getMyOrders({ page: pageIndex, size: PAGE_SIZE });
+      const items = data.content || (Array.isArray(data) ? data : []);
+      setOrders(items);
+      setTotalPages(data.totalPages || 1);
+      setTotalElements(data.totalElements ?? items.length);
+    } catch {
+      setOrders([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    orderApi.getMyOrders().then((data) => {
-      setOrders(data.content || data || []);
-    }).catch(() => setOrders([])).finally(() => setLoading(false));
+    fetchOrders(0);
   }, []);
+
+  const handlePageChange = (newPage) => {
+    if (newPage < 0 || newPage >= totalPages) return;
+    setPage(newPage);
+    fetchOrders(newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleCancelOrder = async (orderId) => {
     if (!confirm('Bạn có chắc chắn muốn hủy đơn hàng này không?')) return;
@@ -164,6 +188,51 @@ export default function OrderHistoryPage() {
                     )}
                   </div>
                 ))}
+              </div>
+            )}
+
+            {totalPages > 1 && !loading && (
+              <div className="orders-pagination">
+                <button
+                  type="button"
+                  className="orders-page-btn"
+                  disabled={page === 0}
+                  onClick={() => handlePageChange(page - 1)}
+                >
+                  Trước
+                </button>
+
+                {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 7) {
+                    pageNum = i;
+                  } else if (page <= 3) {
+                    pageNum = i;
+                  } else if (page >= totalPages - 4) {
+                    pageNum = totalPages - 7 + i;
+                  } else {
+                    pageNum = page - 3 + i;
+                  }
+                  return (
+                    <button
+                      key={pageNum}
+                      type="button"
+                      className={`orders-page-btn ${pageNum === page ? 'active' : ''}`}
+                      onClick={() => handlePageChange(pageNum)}
+                    >
+                      {pageNum + 1}
+                    </button>
+                  );
+                })}
+
+                <button
+                  type="button"
+                  className="orders-page-btn"
+                  disabled={page >= totalPages - 1}
+                  onClick={() => handlePageChange(page + 1)}
+                >
+                  Sau
+                </button>
               </div>
             )}
           </div>

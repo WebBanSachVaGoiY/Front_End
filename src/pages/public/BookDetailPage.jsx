@@ -5,6 +5,7 @@ import {
   BookOpen, Building, Calendar, Hash, Globe, Trash2,
 } from 'lucide-react';
 import { bookApi } from '../../api/bookApi';
+import { recommendationApi } from '../../api/recommendationApi';
 import { reviewApi } from '../../api/reviewApi';
 import { interactionApi } from '../../api/interactionApi';
 import { useCart } from '../../context/CartContext';
@@ -25,13 +26,14 @@ import './BookDetailPage.css';
 export default function BookDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const { addToCart, items: cartItems, setBuyNowBookIds } = useCart();
   const { isAuthenticated, user } = useAuth();
   const toast = useToast();
 
   const [book, setBook] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [related, setRelated] = useState([]);
+  const [fbtBooks, setFbtBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
@@ -62,12 +64,28 @@ export default function BookDetailPage() {
         setBook(bookData);
         setReviews(reviewData.content || reviewData || []);
 
-        if (bookData.category?.id) {
-          const relatedData = await bookApi.getBooks({
-            categoryId: bookData.category.id,
-            size: 4,
-          }).catch(() => ({ content: [] }));
-          setRelated((relatedData.content || []).filter((b) => b.id !== bookData.id));
+        // Gợi ý sách tương tự (CBF) — fallback sang cùng danh mục nếu chưa có dữ liệu mô hình
+        try {
+          let similar = await recommendationApi.getRelated(bookData.id, 4);
+          if (similar.length === 0 && bookData.category?.id) {
+            const fallback = await bookApi
+              .getBooks({ categoryId: bookData.category.id, size: 5 })
+              .catch(() => ({ content: [] }));
+            similar = (fallback.content || [])
+              .filter((b) => String(b.id) !== String(bookData.id))
+              .slice(0, 4);
+          }
+          setRelated(similar);
+        } catch {
+          setRelated([]);
+        }
+
+        // Thường được mua cùng (FBT)
+        try {
+          const fbt = await recommendationApi.getFrequentlyBoughtTogether(bookData.id, 4);
+          setFbtBooks(fbt);
+        } catch {
+          setFbtBooks([]);
         }
 
         if (isAuthenticated) {
@@ -124,6 +142,31 @@ export default function BookDetailPage() {
     setAdding(true);
     try {
       await addToCart(book.id, quantity);
+
+      // Nếu trong giỏ đang có sản phẩm khác ngoài cuốn sách này, hỏi người dùng
+      const otherItems = cartItems.filter(
+        (it) => String(it.book?.id || it.id) !== String(book.id)
+      );
+
+      if (otherItems.length > 0) {
+        const confirmed = window.confirm(
+          `Giỏ hàng của bạn đang có ${otherItems.length} sản phẩm khác.\n\n` +
+          `Bạn muốn thanh toán TẤT CẢ sản phẩm trong giỏ hay CHỈ cuốn "${book.title}"?\n\n` +
+          `• Nhấn OK  → Thanh toán chỉ cuốn sách này\n` +
+          `• Nhấn Hủy → Thanh toán tất cả giỏ hàng`
+        );
+        if (confirmed) {
+          // Chỉ checkout cuốn sách hiện tại
+          setBuyNowBookIds([book.id]);
+        } else {
+          // Checkout toàn bộ giỏ
+          setBuyNowBookIds(null);
+        }
+      } else {
+        // Giỏ chỉ có sách này, không cần hỏi
+        setBuyNowBookIds(null);
+      }
+
       navigate('/checkout');
     } catch {
       toast.error('Không thể xử lý yêu cầu mua ngay');
@@ -468,14 +511,28 @@ export default function BookDetailPage() {
               )}
             </div>
 
+            {/* Frequently Bought Together */}
+            {fbtBooks.length > 0 && (
+              <div className="related-section animate-fadeInUp">
+                <div className="section-header">
+                  <h2 className="section-title">Thường được mua cùng</h2>
+                </div>
+                <div className="book-grid">
+                  {fbtBooks.map((b) => <BookCard key={b.id} book={b} />)}
+                </div>
+              </div>
+            )}
+
             {/* Related Books */}
             {related.length > 0 && (
               <div className="related-section animate-fadeInUp">
                 <div className="section-header">
-                  <h2 className="section-title">Sách cùng danh mục</h2>
-                  <Link to={`/books?categoryId=${book.category?.id}`} className="see-all-link">
-                    Xem thêm →
-                  </Link>
+                  <h2 className="section-title">Sách tương tự</h2>
+                  {book.category?.id && (
+                    <Link to={`/books?categoryId=${book.category.id}`} className="see-all-link">
+                      Xem thêm →
+                    </Link>
+                  )}
                 </div>
                 <div className="book-grid">
                   {related.map((b) => <BookCard key={b.id} book={b} />)}

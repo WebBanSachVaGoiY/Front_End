@@ -18,10 +18,14 @@ const EMPTY_BOOK = {
 };
 
 export default function ManageBooksPage() {
+  const PAGE_SIZE = 15;
   const [books, setBooks] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingBook, setEditingBook] = useState(null);
   const [form, setForm] = useState(EMPTY_BOOK);
@@ -29,20 +33,53 @@ export default function ManageBooksPage() {
   const [deleting, setDeleting] = useState(null);
   const toast = useToast();
 
-  const fetchBooks = async () => {
+  const fetchBooks = async (pageIndex = page, searchKeyword = search) => {
     setLoading(true);
     try {
-      const data = await bookApi.getBooks({ size: 50 });
-      setBooks(data.content || data || []);
+      const params = {
+        page: pageIndex,
+        size: PAGE_SIZE,
+      };
+      if (searchKeyword && searchKeyword.trim()) {
+        params.keyword = searchKeyword.trim();
+      }
+      const data = await bookApi.getAdminBooks(params);
+      const items = data.content || (Array.isArray(data) ? data : []);
+      setBooks(items);
+      setTotalPages(data.totalPages || 1);
+      setTotalElements(data.totalElements ?? items.length);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchBooks();
+    fetchBooks(0, '');
     bookApi.getCategories().then(setCategories).catch(() => {});
   }, []);
+
+  const handleSearchChange = (e) => {
+    const val = e.target.value;
+    setSearch(val);
+    if (!val.trim()) {
+      setPage(0);
+      fetchBooks(0, '');
+    }
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      setPage(0);
+      fetchBooks(0, search);
+    }
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage < 0 || newPage >= totalPages) return;
+    setPage(newPage);
+    fetchBooks(newPage, search);
+  };
 
   const openCreate = () => {
     bookApi.getCategories().then(setCategories).catch(() => {});
@@ -137,11 +174,7 @@ export default function ManageBooksPage() {
     }
   };
 
-  const filteredBooks = books.filter(
-    (b) =>
-      b.title.toLowerCase().includes(search.toLowerCase()) ||
-      b.author.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredBooks = books;
 
   const setF = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
 
@@ -157,9 +190,10 @@ export default function ManageBooksPage() {
           <Search size={16} className="admin-search-icon" />
           <input
             className="form-input admin-search-input"
-            placeholder="Tìm kiếm theo tên, tác giả..."
+            placeholder="Tìm kiếm theo tên, tác giả... (nhấn Enter để tìm)"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={handleSearchChange}
+            onKeyDown={handleSearchKeyDown}
           />
         </div>
         <Button variant="primary" icon={<Plus size={16} />} onClick={openCreate} id="add-book-btn">
@@ -262,6 +296,56 @@ export default function ManageBooksPage() {
               <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                 Không tìm thấy sách nào
               </p>
+            )}
+
+            {totalPages > 1 && (
+              <div className="admin-pagination-wrapper">
+                <div className="admin-pagination-info">
+                  Hiển thị <strong>{filteredBooks.length}</strong> / <strong>{totalElements}</strong> cuốn sách (Trang {page + 1}/{totalPages})
+                </div>
+                <div className="admin-pagination">
+                  <button
+                    type="button"
+                    className="admin-page-btn"
+                    disabled={page === 0}
+                    onClick={() => handlePageChange(page - 1)}
+                  >
+                    Trước
+                  </button>
+
+                  {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 7) {
+                      pageNum = i;
+                    } else if (page <= 3) {
+                      pageNum = i;
+                    } else if (page >= totalPages - 4) {
+                      pageNum = totalPages - 7 + i;
+                    } else {
+                      pageNum = page - 3 + i;
+                    }
+                    return (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        className={`admin-page-btn ${pageNum === page ? 'active' : ''}`}
+                        onClick={() => handlePageChange(pageNum)}
+                      >
+                        {pageNum + 1}
+                      </button>
+                    );
+                  })}
+
+                  <button
+                    type="button"
+                    className="admin-page-btn"
+                    disabled={page >= totalPages - 1}
+                    onClick={() => handlePageChange(page + 1)}
+                  >
+                    Sau
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         )}

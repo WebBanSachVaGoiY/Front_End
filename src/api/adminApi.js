@@ -99,6 +99,26 @@ export const adminApi = {
     }
   },
 
+  // ──────────────────────────────────────────────────────
+  // RecSys — Khớp với AdminRecommendationController (Spring Boot)
+  // Endpoint: POST /admin/recommendations/train?type=all|content-based|collaborative|co-purchase
+  // ──────────────────────────────────────────────────────
+
+  /**
+   * Trigger huấn luyện lại mô hình gợi ý (đồng bộ — chờ tới khi xong).
+   * Spring Boot sẽ gọi sang RecSys FastAPI rồi xoá cache gợi ý.
+   */
+  trainRecommendations: async (type = 'all') => {
+    const response = await api.post('/admin/recommendations/train', null, { params: { type } });
+    return response.data?.data || response.data;
+  },
+
+  /** Lấy chỉ số đo lường đánh giá mô hình RecSys — GET /api/v1/admin/recommendations/evaluate */
+  evaluateRecommendations: async (topK = 10) => {
+    const response = await api.get('/admin/recommendations/evaluate', { params: { topK } });
+    return response.data?.data || response.data;
+  },
+
   /** Bật / tắt trạng thái hoạt động tài khoản — PATCH /api/v1/admin/users/{id}/toggle-enabled */
   toggleUserEnabled: async (id) => {
     try {
