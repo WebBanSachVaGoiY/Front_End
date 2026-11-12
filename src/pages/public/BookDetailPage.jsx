@@ -91,7 +91,14 @@ export default function BookDetailPage() {
         if (isAuthenticated) {
           reviewApi.canUserReview(id)
             .then(setCanReviewState)
-            .catch(() => setCanReviewState({ canReview: true }));
+            .catch(() => setCanReviewState({
+              canReview: false,
+              hasPurchased: false,
+              alreadyReviewed: false,
+              reason: 'Chỉ những khách hàng đã mua và nhận sách thành công mới có thể gửi đánh giá.',
+            }));
+        } else {
+          setCanReviewState(null);
         }
       } catch {
         toast.error('Không tìm thấy sách');
@@ -102,7 +109,7 @@ export default function BookDetailPage() {
     };
     fetch();
     window.scrollTo(0, 0);
-  }, [id, isAuthenticated]);
+  }, [id, isAuthenticated, navigate, toast]);
 
   const changeQty = (delta) => {
     setQuantity((q) => {
@@ -206,7 +213,7 @@ export default function BookDetailPage() {
       await reviewApi.deleteReview(reviewId);
       setReviews((prev) => prev.filter((r) => r.id !== reviewId));
       toast.success('Đã xóa đánh giá thành công');
-      reviewApi.canUserReview(book.id).then(setCanReviewState).catch(() => {});
+      reviewApi.canUserReview(book.id).then(setCanReviewState).catch(() => setCanReviewState({ canReview: false }));
       bookApi.getBook(book.id).then(setBook).catch(() => {});
     } catch (err) {
       toast.error(err.response?.data?.message || 'Không thể xóa đánh giá');

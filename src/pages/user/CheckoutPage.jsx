@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Phone, User, FileText, CheckCircle, Package } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
@@ -16,17 +16,20 @@ import { DEFAULT_BOOK_COVER } from '../../utils/constants';
 import './CheckoutPage.css';
 
 export default function CheckoutPage() {
-  const { items: allItems, subtotal: rawSubtotal, discount, shippingFee, getFinalAmount, clearCart, deleteSelectedItems, buyNowBookIds, setBuyNowBookIds } = useCart();
+  const { items: allItems, discount, shippingFee, clearCart, deleteSelectedItems, buyNowBookIds, setBuyNowBookIds } = useCart();
   const { user, updateUser } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
 
-  // Reset trạng thái buyNow khi rời khỏi trang checkout
+  // Reset trạng thái buyNow khi rời khỏi trang checkout (chỉ reset 1 lần duy nhất khi component unmount thực sự)
   useEffect(() => {
     return () => {
       setBuyNowBookIds(null);
     };
-  }, [setBuyNowBookIds]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- Chỉ reset buyNow khi CheckoutPage unmount thực sự, tránh reset sớm khi CartProvider re-render
+
+  // Ref guard ngăn syncFullProfile chạy lặp vô tận (tồn tại suốt vòng đời component, không reset khi cleanup)
+  const hasFetchedProfileRef = useRef(false);
 
   // Nếu "Mua ngay" đã chọn sách cụ thể thì chỉ checkout những sách đó
   const items = buyNowBookIds
@@ -58,10 +61,12 @@ export default function CheckoutPage() {
   }, [user]);
 
   // Nếu user đã đăng nhập nhưng trong state cục bộ còn thiếu sđt hoặc địa chỉ, chủ động tải thông tin mới nhất từ API /auth/me
+  // Dùng hasFetchedProfileRef để đảm bảo chỉ gọi tối đa 1 lần duy nhất trong suốt vòng đời của CheckoutPage
   useEffect(() => {
-    const syncFullProfile = async () => {
-      if (!user) return;
-      if (!user.phone || !user.address) {
+    if (!user || hasFetchedProfileRef.current) return;
+    if (!user.phone || !user.address) {
+      hasFetchedProfileRef.current = true;
+      const syncFullProfile = async () => {
         try {
           const profile = await authApi.getMe();
           if (profile) {
@@ -76,9 +81,9 @@ export default function CheckoutPage() {
         } catch {
           // Bỏ qua lỗi nếu offline
         }
-      }
-    };
-    syncFullProfile();
+      };
+      syncFullProfile();
+    }
   }, [user, updateUser]);
 
   const [paymentMethod, setPaymentMethod] = useState('COD');
@@ -136,6 +141,17 @@ export default function CheckoutPage() {
           } else {
             await clearCart();
           }
+
+          // Tự động lưu phone/address vào hồ sơ user nếu profile chưa có (fire-and-forget)
+          if (user && (!user.phone || !user.address)) {
+            const updatePayload = {};
+            if (!user.phone && form.recipientPhone?.trim()) updatePayload.phone = form.recipientPhone.trim();
+            if (!user.address && form.shippingAddress?.trim()) updatePayload.address = form.shippingAddress.trim();
+            if (Object.keys(updatePayload).length > 0) {
+              authApi.updateProfile(updatePayload).catch(() => {});
+            }
+          }
+
           window.location.href = paymentRes.paymentUrl;
           return;
         } else {
@@ -151,6 +167,23 @@ export default function CheckoutPage() {
       }
       setSuccess(order);
       toast.success('Đặt hàng thành công! 🎉');
+
+      // Tự động lưu phone/address vào hồ sơ user nếu profile chưa có (fire-and-forget, bọc try-catch, không chặn UI)
+      if (user && (!user.phone || !user.address)) {
+        const updatePayload = {};
+        if (!user.phone && form.recipientPhone?.trim()) updatePayload.phone = form.recipientPhone.trim();
+        if (!user.address && form.shippingAddress?.trim()) updatePayload.address = form.shippingAddress.trim();
+
+        if (Object.keys(updatePayload).length > 0) {
+          authApi.updateProfile(updatePayload)
+            .then((newProfile) => {
+              if (newProfile) updateUser(newProfile);
+            })
+            .catch(() => {
+              // Bỏ qua lỗi ngầm nếu lưu profile thất bại, không làm phiền user
+            });
+        }
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || err.message || 'Đặt hàng thất bại, vui lòng thử lại');
     } finally {

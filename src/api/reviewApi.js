@@ -52,7 +52,12 @@ export const reviewApi = {
       return response.data?.data || response.data;
     } catch (err) {
       if (!isOfflineOrUnimplemented(err)) throw err;
-      return { canReview: true, hasPurchased: true, alreadyReviewed: false };
+      return {
+        canReview: false,
+        hasPurchased: false,
+        alreadyReviewed: false,
+        reason: 'Chỉ những khách hàng đã mua và nhận sách thành công mới có thể gửi đánh giá.'
+      };
     }
   },
 

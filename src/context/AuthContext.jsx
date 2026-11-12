@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useReducer, useCallback } from 'react';
+import { createContext, useContext, useEffect, useReducer, useCallback, useMemo } from 'react';
 import { authApi } from '../api/authApi';
 
 const AuthContext = createContext(null);
@@ -42,8 +42,23 @@ function authReducer(state, action) {
         isLoading: false,
         isAuthenticated: false,
       };
-    case 'SET_USER':
-      return { ...state, user: action.payload, isAuthenticated: true, isLoading: false };
+    case 'SET_USER': {
+      try {
+        localStorage.setItem('bookrunner_current_user', JSON.stringify(action.payload));
+      } catch {
+        // ignore
+      }
+      return { ...state, user: action.payload, isAuthenticated: Boolean(action.payload), isLoading: false };
+    }
+    case 'UPDATE_USER': {
+      const updatedUser = { ...state.user, ...action.payload };
+      try {
+        localStorage.setItem('bookrunner_current_user', JSON.stringify(updatedUser));
+      } catch {
+        // ignore
+      }
+      return { ...state, user: updatedUser, isAuthenticated: true, isLoading: false };
+    }
     case 'UPDATE_TOKEN':
       return { ...state, accessToken: action.payload };
     default:
@@ -107,7 +122,7 @@ export function AuthProvider({ children }) {
     };
   }, [logout]);
 
-  const login = async (email, password) => {
+  const login = useCallback(async (email, password) => {
     const data = await authApi.login({ email, password });
     localStorage.setItem('accessToken', data.accessToken);
     localStorage.setItem('refreshToken', data.refreshToken);
@@ -132,32 +147,29 @@ export function AuthProvider({ children }) {
       },
     });
     return data;
-  };
+  }, []);
 
-  const updateUser = (userData) => {
-    const updated = { ...state.user, ...userData };
-    try {
-      localStorage.setItem('bookrunner_current_user', JSON.stringify(updated));
-    } catch {
-      // ignore
-    }
-    dispatch({ type: 'SET_USER', payload: updated });
-  };
+  const updateUser = useCallback((userData) => {
+    dispatch({ type: 'UPDATE_USER', payload: userData });
+  }, []);
 
-  const isAdmin = () => state.user?.role === 'ROLE_ADMIN';
-  const isCustomer = () => state.user?.role === 'ROLE_CUSTOMER';
+  const isAdmin = useCallback(() => state.user?.role === 'ROLE_ADMIN', [state.user]);
+  const isCustomer = useCallback(() => state.user?.role === 'ROLE_CUSTOMER', [state.user]);
+
+  const contextValue = useMemo(
+    () => ({
+      ...state,
+      login,
+      logout,
+      updateUser,
+      isAdmin,
+      isCustomer,
+    }),
+    [state, login, logout, updateUser, isAdmin, isCustomer]
+  );
 
   return (
-    <AuthContext.Provider
-      value={{
-        ...state,
-        login,
-        logout,
-        updateUser,
-        isAdmin,
-        isCustomer,
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useReducer } from 'react';
+import { createContext, useCallback, useContext, useEffect, useReducer, useMemo } from 'react';
 import { cartApi } from '../api/cartApi';
 import { interactionApi } from '../api/interactionApi';
 import { useAuth } from './AuthContext';
@@ -59,9 +59,20 @@ function cartReducer(state, action) {
     }
     case 'CLEAR_VOUCHER':
       return { ...state, voucher: null, discount: 0 };
-    case 'SET_BUY_NOW_BOOK_IDS':
+    case 'SET_BUY_NOW_BOOK_IDS': {
       // null = checkout tất cả; mảng bookId = chỉ checkout các sách được chỉ định
+      // Idempotency check: tránh re-render thừa nếu payload không đổi
+      if (state.buyNowBookIds === action.payload) return state;
+      if (
+        Array.isArray(state.buyNowBookIds) &&
+        Array.isArray(action.payload) &&
+        state.buyNowBookIds.length === action.payload.length &&
+        state.buyNowBookIds.every((id, idx) => String(id) === String(action.payload[idx]))
+      ) {
+        return state;
+      }
       return { ...state, buyNowBookIds: action.payload };
+    }
     case 'CLEAR_CART':
       return { ...initialState };
     default:
@@ -95,7 +106,29 @@ export function CartProvider({ children }) {
     fetchCart();
   }, [fetchCart]);
 
-  const addToCart = async (bookId, quantity = 1) => {
+  const removeItem = useCallback(async (itemId) => {
+    try {
+      await cartApi.removeItem(itemId);
+    } finally {
+      await fetchCart(true);
+    }
+  }, [fetchCart]);
+
+  const updateQuantity = useCallback(async (itemId, quantity) => {
+    if (quantity <= 0) {
+      await removeItem(itemId);
+      return;
+    }
+    dispatch({ type: 'UPDATE_ITEM_QTY', payload: { itemId, quantity } });
+    try {
+      await cartApi.updateItem(itemId, { quantity });
+      await fetchCart(true);
+    } catch {
+      await fetchCart(true);
+    }
+  }, [fetchCart, removeItem]);
+
+  const addToCart = useCallback(async (bookId, quantity = 1) => {
     // Kiểm tra xem sách đã tồn tại trong giỏ chưa (tránh spam ADD_TO_CART khi chỉ tăng số lượng)
     const isAlreadyInCart = state.items.some(
       (it) => String(it.id) === String(bookId) || String(it.book?.id) === String(bookId)
@@ -108,77 +141,70 @@ export function CartProvider({ children }) {
     if (isAuthenticated && !isAlreadyInCart) {
       interactionApi.logInteraction({ bookId, interactionType: 'ADD_TO_CART' });
     }
-  };
+  }, [state.items, isAuthenticated, fetchCart]);
 
-  const updateQuantity = async (itemId, quantity) => {
-    if (quantity <= 0) {
-      await removeItem(itemId);
-      return;
-    }
-    dispatch({ type: 'UPDATE_ITEM_QTY', payload: { itemId, quantity } });
-    try {
-      await cartApi.updateItem(itemId, { quantity });
-      await fetchCart(true);
-    } catch {
-      await fetchCart(true);
-    }
-  };
-
-  const removeItem = async (itemId) => {
-    try {
-      await cartApi.removeItem(itemId);
-    } finally {
-      await fetchCart(true);
-    }
-  };
-
-  const deleteSelectedItems = async (itemIds = []) => {
+  const deleteSelectedItems = useCallback(async (itemIds = []) => {
     try {
       await cartApi.deleteItems(itemIds);
     } finally {
       await fetchCart(true);
     }
-  };
+  }, [fetchCart]);
 
-  const clearCart = async () => {
+  const clearCart = useCallback(async () => {
     await cartApi.clearCart();
     dispatch({ type: 'CLEAR_CART' });
-  };
+  }, []);
 
-  const applyVoucher = (voucher) => {
+  const applyVoucher = useCallback((voucher) => {
     dispatch({ type: 'APPLY_VOUCHER', payload: voucher });
-  };
+  }, []);
 
-  const removeVoucher = () => {
+  const removeVoucher = useCallback(() => {
     dispatch({ type: 'CLEAR_VOUCHER' });
-  };
+  }, []);
 
-  const setBuyNowBookIds = (bookIds) => {
+  const setBuyNowBookIds = useCallback((bookIds) => {
     // bookIds: null (checkout tất cả) hoặc mảng bookId (chỉ checkout những sách này)
     dispatch({ type: 'SET_BUY_NOW_BOOK_IDS', payload: bookIds });
-  };
+  }, []);
 
-  const getFinalAmount = () => {
+  const getFinalAmount = useCallback(() => {
     if (state.items.length === 0) return 0;
     return Math.max(0, state.subtotal - state.discount + state.shippingFee);
-  };
+  }, [state.items.length, state.subtotal, state.discount, state.shippingFee]);
+
+  const contextValue = useMemo(
+    () => ({
+      ...state,
+      fetchCart,
+      addToCart,
+      updateQuantity,
+      removeItem,
+      deleteSelectedItems,
+      clearCart,
+      applyVoucher,
+      removeVoucher,
+      setBuyNowBookIds,
+      getFinalAmount,
+    }),
+    [
+      state,
+      fetchCart,
+      addToCart,
+      updateQuantity,
+      removeItem,
+      deleteSelectedItems,
+      clearCart,
+      applyVoucher,
+      removeVoucher,
+      setBuyNowBookIds,
+      getFinalAmount,
+    ]
+  );
 
   return (
-    <CartContext.Provider
-      value={{
-        ...state,
-        fetchCart,
-        addToCart,
-        updateQuantity,
-        removeItem,
-        deleteSelectedItems,
-        clearCart,
-        applyVoucher,
-        removeVoucher,
-        setBuyNowBookIds,
-        getFinalAmount,
-      }}
-    >
+    <CartContext.Provider value={contextValue}>
       {children}
     </CartContext.Provider>
   );

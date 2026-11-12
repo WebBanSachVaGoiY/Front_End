@@ -49,15 +49,32 @@ export default function OrderHistoryPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleCancelOrder = async (orderId) => {
-    if (!confirm('Bạn có chắc chắn muốn hủy đơn hàng này không?')) return;
-    setCancellingId(orderId);
+  const handleCancelOrder = async (order) => {
+    let confirmMsg = `Bạn có chắc chắn muốn hủy đơn hàng #${order.orderCode}?`;
+    const isPaidOnline = order.paymentStatus === 'PAID';
+
+    if (isPaidOnline) {
+      confirmMsg =
+        `⚠️ CẢNH BÁO HOÀN TIỀN:\n\n` +
+        `Đơn hàng #${order.orderCode} đã được thanh toán trực tuyến thành công (${formatCurrency(order.finalAmount)}).\n` +
+        `Sau khi hủy đơn, số tiền đã thanh toán sẽ KHÔNG tự động hoàn về tài khoản ngay lập tức.\n\n` +
+        `Vui lòng liên hệ bộ phận CSKH (Hotline: 1900-6868 hoặc email cskh@bookrunner.vn) để được hỗ trợ đối soát và hoàn tiền.\n\n` +
+        `Bạn có chắc chắn muốn tiếp tục hủy đơn hàng này không?`;
+    }
+
+    if (!confirm(confirmMsg)) return;
+
+    setCancellingId(order.id);
     try {
-      await orderApi.cancelOrder(orderId);
+      await orderApi.cancelOrder(order.id);
       setOrders((prev) =>
-        prev.map((o) => (o.id === orderId ? { ...o, status: 'CANCELLED' } : o))
+        prev.map((o) => (o.id === order.id ? { ...o, status: 'CANCELLED' } : o))
       );
-      toast.success('Hủy đơn hàng thành công');
+      if (isPaidOnline) {
+        toast.warning('Đã hủy đơn hàng. Vui lòng liên hệ hotline 1900-6868 để làm thủ tục hoàn tiền!');
+      } else {
+        toast.success('Hủy đơn hàng thành công');
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Không thể hủy đơn hàng');
     } finally {
@@ -169,14 +186,19 @@ export default function OrderHistoryPage() {
 
                         {/* Customer Cancel Order Action */}
                         {(order.status === 'PENDING' || order.status === 'CONFIRMED') && (
-                          <div className="order-actions" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+                          <div className="order-actions" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border)', flexWrap: 'wrap', gap: '0.75rem' }}>
+                            {order.paymentStatus === 'PAID' ? (
+                              <span style={{ fontSize: '0.8125rem', color: 'var(--accent)', fontWeight: 500 }}>
+                                💡 Đơn đã thanh toán online — Hủy đơn cần liên hệ CSKH để nhận lại tiền hoàn.
+                              </span>
+                            ) : <div />}
                             <button
                               type="button"
                               className="btn btn-outline btn-sm"
                               style={{ color: 'var(--error)', borderColor: 'var(--error)', cursor: 'pointer', padding: '6px 16px', borderRadius: '6px' }}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleCancelOrder(order.id);
+                                handleCancelOrder(order);
                               }}
                               disabled={cancellingId === order.id}
                             >
